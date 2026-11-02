@@ -1,0 +1,2119 @@
+{
+  "info": {
+    "name": "ErvisioTodo API v1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Generata dal catalogo locale. Configura baseUrl, login/password o apiToken nelle variabili private. Le richieste modificano dati: eseguile singolarmente in ambiente di test."
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{apiToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "apiToken",
+      "value": ""
+    },
+    {
+      "key": "login",
+      "value": ""
+    },
+    {
+      "key": "password",
+      "value": ""
+    },
+    {
+      "key": "username",
+      "value": ""
+    },
+    {
+      "key": "email",
+      "value": ""
+    },
+    {
+      "key": "projectId",
+      "value": ""
+    },
+    {
+      "key": "listId",
+      "value": ""
+    },
+    {
+      "key": "taskId",
+      "value": ""
+    },
+    {
+      "key": "tagId",
+      "value": ""
+    },
+    {
+      "key": "fileId",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "tokenId",
+      "value": ""
+    },
+    {
+      "key": "shareId",
+      "value": ""
+    },
+    {
+      "key": "destinationListId",
+      "value": ""
+    },
+    {
+      "key": "resetToken",
+      "value": ""
+    },
+    {
+      "key": "verifyToken",
+      "value": ""
+    },
+    {
+      "key": "newPassword",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "me",
+      "item": [
+        {
+          "name": "GET /me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/me",
+            "description": "Profilo, ruolo e limiti del token corrente"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "auth",
+      "item": [
+        {
+          "name": "GET /auth/providers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/auth/providers",
+            "description": "Metodi di accesso disponibili e avvio OAuth",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "description": "Accedi con password e ottieni un token personale",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"{{login}}\",\n  \"password\": \"{{password}}\",\n  \"name\": \"Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "if (pm.response.code === 201) pm.collectionVariables.set('apiToken', pm.response.json().data.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/register",
+            "description": "Registra un account locale",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/forgot",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/forgot",
+            "description": "Richiedi recupero password via email",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/reset",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/reset",
+            "description": "Reimposta password con token monouso",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{resetToken}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/verify",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/verify",
+            "description": "Conferma email con token monouso",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{verifyToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/auth/logout",
+            "description": "Revoca il token corrente — Scope: account:write"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "account",
+      "item": [
+        {
+          "name": "PATCH /account/password",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/account/password",
+            "description": "Cambia password e revoca sessioni e token — Scope: account:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"{{password}}\",\n  \"password\": \"{{newPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "projects",
+      "item": [
+        {
+          "name": "GET /projects",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/projects",
+            "description": "Elenca progetti accessibili — Scope: projects:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /projects",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/projects",
+            "description": "Crea progetto — Scope: projects:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Progetto API\",\n  \"slug\": \"progetto-api\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "if (pm.response.code === 201) { const data = pm.response.json().data; pm.collectionVariables.set('projectId', data._id || data.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /projects/{id}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/projects/{{projectId}}",
+            "description": "Leggi progetto — Scope: projects:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /projects/{id}",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/projects/{{projectId}}",
+            "description": "Modifica progetto — Scope: projects:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Progetto aggiornato\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /projects/{id}",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/projects/{{projectId}}",
+            "description": "Elimina contenitore senza cancellare le liste — Scope: projects:write"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /projects/{id}/lists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/projects/{{projectId}}/lists",
+            "description": "Elenca liste di un progetto — Scope: lists:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /projects/{id}/members",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/projects/{{projectId}}/members",
+            "description": "Leggi membri del progetto — Scope: projects:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /projects/{id}/members",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/projects/{{projectId}}/members",
+            "description": "Sostituisci membri del progetto — Scope: projects:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"members\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "lists",
+      "item": [
+        {
+          "name": "GET /lists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/lists",
+            "description": "Elenca liste accessibili — Scope: lists:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /lists",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/lists",
+            "description": "Crea lista — Scope: lists:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Lista API\",\n  \"slug\": \"lista-api\",\n  \"projectId\": \"{{projectId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "if (pm.response.code === 201) { const data = pm.response.json().data; pm.collectionVariables.set('listId', data._id || data.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /lists/{id}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/lists/{{listId}}",
+            "description": "Leggi lista e personalizzazione — Scope: lists:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /lists/{id}",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/lists/{{listId}}",
+            "description": "Modifica lista, progetto, identità o tema — Scope: lists:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Lista aggiornata\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /lists/{id}",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/lists/{{listId}}",
+            "description": "Elimina lista e contenuti — Scope: lists:write"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /lists/{id}/clear",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/lists/{{listId}}/clear",
+            "description": "Elimina attività attive della lista — Scope: lists:write"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /lists/{id}/tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/lists/{{listId}}/tasks",
+            "description": "Elenca attività con filtri e gerarchia — Scope: tasks:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /lists/{id}/tags",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/lists/{{listId}}/tags",
+            "description": "Elenca tag della lista — Scope: tags:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /lists/{id}/members",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/lists/{{listId}}/members",
+            "description": "Leggi membri effettivi ed espliciti — Scope: lists:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /lists/{id}/members",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/lists/{{listId}}/members",
+            "description": "Sostituisci membri espliciti della lista — Scope: lists:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"members\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /lists/{id}/caddy",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/lists/{{listId}}/caddy",
+            "description": "Genera configurazione Caddy per la lista — Scope: lists:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /lists/{id}/shares",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/lists/{{listId}}/shares",
+            "description": "Elenca link pubblici della lista — Scope: shares:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /lists/{id}/shares",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/lists/{{listId}}/shares",
+            "description": "Crea link pubblico in sola lettura — Scope: shares:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lifetimeHours\": 24\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /lists/{id}/shares/{shareId}",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/lists/{{listId}}/shares/{{shareId}}",
+            "description": "Revoca link pubblico — Scope: shares:write"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "tasks",
+      "item": [
+        {
+          "name": "GET /tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/tasks?listId={{listId}}",
+            "description": "Elenca attività di una lista — Scope: tasks:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /tasks",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/tasks",
+            "description": "Crea attività o sottoattività — Scope: tasks:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listId\": \"{{listId}}\",\n  \"title\": \"Attività API\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "if (pm.response.code === 201) { const data = pm.response.json().data; pm.collectionVariables.set('taskId', data._id || data.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /tasks/{id}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/tasks/{{taskId}}",
+            "description": "Leggi dettagli, assegnazioni e allegati — Scope: tasks:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /tasks/{id}",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/tasks/{{taskId}}",
+            "description": "Modifica campi attività — Scope: tasks:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Aggiornata via API\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /tasks/{id}",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/tasks/{{taskId}}",
+            "description": "Elimina attività e discendenti — Scope: tasks:write"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /tasks/{id}/complete",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/tasks/{{taskId}}/complete",
+            "description": "Completa attività e discendenti — Scope: tasks:write"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /tasks/{id}/reopen",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/tasks/{{taskId}}/reopen",
+            "description": "Riapri attività e antenati — Scope: tasks:write"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /tasks/{id}/favorite",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/tasks/{{taskId}}/favorite",
+            "description": "Attiva/disattiva preferito — Scope: tasks:write"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /tasks/reorder",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/tasks/reorder",
+            "description": "Riordina attività — Scope: tasks:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\n    \"{{taskId}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /tasks/{id}/move",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/tasks/{{taskId}}/move",
+            "description": "Sposta sottoalbero in un’altra lista o posizione — Scope: tasks:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listId\": \"{{destinationListId}}\",\n  \"parentTaskId\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /tasks/{id}/copy",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/tasks/{{taskId}}/copy",
+            "description": "Duplica sottoalbero con allegati — Scope: tasks:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listId\": \"{{destinationListId}}\",\n  \"parentTaskId\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /tasks/bulk",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/tasks/bulk",
+            "description": "Completa, riapri o elimina fino a 100 attività — Scope: tasks:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\n    \"{{taskId}}\"\n  ],\n  \"action\": \"complete\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /tasks/{id}/attachments",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/tasks/{{taskId}}/attachments",
+            "description": "Collega allegato — Scope: tasks:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"allegato.txt\",\n  \"url\": \"/api/files/{{fileId}}\",\n  \"mimeType\": \"application/octet-stream\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /tasks/{id}/attachments",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/tasks/{{taskId}}/attachments?url=/api/files/{{fileId}}",
+            "description": "Rimuovi collegamento allegato — Scope: tasks:write"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /tasks/{id}/ai-refactor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/tasks/{{taskId}}/ai-refactor",
+            "description": "Riformula attività tramite AI configurata — Scope: tasks:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"both\",\n  \"generateSubtasks\": false,\n  \"includeSubtasks\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ai",
+      "item": [
+        {
+          "name": "POST /ai/generate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/ai/generate",
+            "description": "Genera proposta attività tramite AI configurata — Scope: tasks:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listId\": \"{{listId}}\",\n  \"prompt\": \"Prepara la prossima release\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "tags",
+      "item": [
+        {
+          "name": "GET /tags",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/tags?listId={{listId}}",
+            "description": "Elenca tag della lista — Scope: tags:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /tags",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/tags",
+            "description": "Crea tag — Scope: tags:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listId\": \"{{listId}}\",\n  \"name\": \"API\",\n  \"color\": \"#b94406\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "if (pm.response.code === 201) { const data = pm.response.json().data; pm.collectionVariables.set('tagId', data._id || data.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /tags/{id}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/tags/{{tagId}}",
+            "description": "Leggi tag — Scope: tags:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /tags/{id}",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/tags/{{tagId}}",
+            "description": "Modifica tag — Scope: tags:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Priorità\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /tags/{id}",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/tags/{{tagId}}",
+            "description": "Elimina tag e riferimenti — Scope: tags:write"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "files",
+      "item": [
+        {
+          "name": "GET /files",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/files",
+            "description": "Elenca metadati allegati accessibili — Scope: files:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /files/upload",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/files/upload",
+            "description": "Carica uno o più allegati privati — Scope: files:write",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "listId",
+                  "value": "{{listId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /files/{id}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/files/{{fileId}}",
+            "description": "Leggi metadati allegato — Scope: files:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /files/{id}",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/files/{{fileId}}",
+            "description": "Rinomina allegato — Scope: files:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"documento.txt\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /files/{id}",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/files/{{fileId}}",
+            "description": "Elimina allegato e riferimenti — Scope: files:write"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /files/{id}/download",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/files/{{fileId}}/download",
+            "description": "Scarica allegato — Scope: files:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "tokens",
+      "item": [
+        {
+          "name": "GET /tokens",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/tokens",
+            "description": "Elenca token personali senza segreti — Scope: tokens:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /tokens",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/tokens",
+            "description": "Crea token con scope e risorse limitate — Scope: tokens:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Client Postman\",\n  \"scopes\": [\n    \"tasks:read\"\n  ],\n  \"resourceMode\": \"selected\",\n  \"listIds\": [\n    \"{{listId}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /tokens/{id}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/tokens/{{tokenId}}",
+            "description": "Leggi token personale senza segreto — Scope: tokens:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /tokens/{id}",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/tokens/{{tokenId}}",
+            "description": "Revoca token e tutti i derivati — Scope: tokens:write"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "users",
+      "item": [
+        {
+          "name": "GET /users/lookup",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/users/lookup?q={{username}}",
+            "description": "Trova un membro tramite username o email esatti — Scope: users:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/users",
+            "description": "Elenca utenti (amministratore) — Scope: users:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /users",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/users",
+            "description": "Crea utente (amministratore) — Scope: users:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"api_member\",\n  \"email\": \"member@example.test\",\n  \"password\": \"{{password}}\",\n  \"role\": \"user\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "if (pm.response.code === 201) { const data = pm.response.json().data; pm.collectionVariables.set('userId', data._id || data.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /users/{id}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/users/{{userId}}",
+            "description": "Leggi utente (amministratore) — Scope: users:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /users/{id}",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/users/{{userId}}",
+            "description": "Modifica ruolo, profilo o accesso (amministratore) — Scope: users:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /users/{id}",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/users/{{userId}}",
+            "description": "Revoca accesso conservando i dati (amministratore) — Scope: users:write"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "settings",
+      "item": [
+        {
+          "name": "GET /settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/settings",
+            "description": "Leggi impostazioni effettive (amministratore) — Scope: settings:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /settings",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/settings",
+            "description": "Aggiorna impostazioni (amministratore) — Scope: settings:write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"siteName\": \"ErvisioTodo\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "usage",
+      "item": [
+        {
+          "name": "GET /usage",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/usage",
+            "description": "Spazio utilizzato e quote — Scope: files:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "activity",
+      "item": [
+        {
+          "name": "GET /activity",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/activity",
+            "description": "Leggi registro attività (amministratore) — Scope: activity:read"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Risposta riuscita', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code < 300) pm.test('Envelope valido', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

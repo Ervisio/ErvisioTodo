@@ -1,0 +1,25 @@
+# docker compose -f compose.yaml -f compose.caddy.yaml up -d --build
+services:
+  app:
+    environment:
+      TRUSTED_IP_HEADER: X-Real-IP
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    profiles: []
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:?Imposta ACME_EMAIL nel file .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile.docker:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+volumes:
+  caddy-data:
+  caddy-config:

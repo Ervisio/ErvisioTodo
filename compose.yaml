@@ -1,0 +1,21 @@
+services:
+  app:
+    build: .
+    image: ervisio-todo:local
+    restart: unless-stopped
+    init: true
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      DATA_DIR: /app/data
+    ports:
+      - "127.0.0.1:${PORT:-3000}:3000"
+    volumes:
+      - todo-data:/app/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    stop_grace_period: 20s
+volumes:
+  todo-data:

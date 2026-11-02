@@ -1,0 +1,26 @@
+[Unit]
+Description=ErvisioTodo standalone
+After=network.target
+
+[Service]
+Type=simple
+User=ervisio
+Group=ervisio
+WorkingDirectory=/opt/ervisio-todo
+EnvironmentFile=/opt/ervisio-todo/.env
+Environment=NODE_ENV=production
+Environment=HOSTNAME=127.0.0.1
+Environment=PORT=3000
+Environment=DATA_DIR=/var/lib/ervisio-todo
+StateDirectory=ervisio-todo
+ExecStart=/usr/bin/node /opt/ervisio-todo/.next/standalone/server.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/ervisio-todo
+
+[Install]
+WantedBy=multi-user.target

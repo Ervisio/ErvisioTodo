@@ -1,0 +1,21 @@
+{
+	email {$ACME_EMAIL}
+	on_demand_tls {
+		ask http://app:3000/api/caddy/ask
+	}
+}
+
+# DNS A/AAAA dell'host canonico e wildcard *.BASE_DOMAIN devono puntare al server.
+# La app autorizza certificati soltanto per AUTH_URL e sottodomini realmente assegnati.
+https:// {
+	tls {
+		on_demand
+	}
+	encode zstd gzip
+	request_body {
+		max_size 512MB
+	}
+	reverse_proxy app:3000 {
+		header_up X-Real-IP {remote_host}
+	}
+}

@@ -18,6 +18,8 @@ import {
   deleteTag,
   setTaskState,
   reorderTasks,
+  tasksFor,
+  enrichTask,
   brandingFor,
   caddySnippet,
 } from "../lib/server/todo";
@@ -149,6 +151,64 @@ test("completion cascades; reopening a subtask reopens ancestors", () => {
   );
   db().prepare("DELETE FROM tasks WHERE id=?").run(p._id);
   assert.equal(rawTasks(l._id).length, 0);
+});
+test("list and task APIs report open top-level and direct subtask counts", () => {
+  const l = list("counts"),
+    openCount = () =>
+      listsFor(alice).find((x) => x._id === l._id)!.openTaskCount,
+    tasks = (query = "") => tasksFor(l._id, alice, new URLSearchParams(query)),
+    add = (title: string, parentTaskId: string | null = null) =>
+      saveTask({ listId: l._id, title, parentTaskId }, alice);
+  assert.equal(openCount(), 0);
+  const a = add("A"),
+    b = add("B"),
+    c1 = add("C1", a._id),
+    c2 = add("C2", a._id),
+    c3 = add("C3", a._id);
+  add("G", c1._id);
+  assert.equal(openCount(), 2);
+  const row = (id: string) => tasks().find((t) => t._id === id)!;
+  assert.deepEqual(
+    [
+      row(a._id).subtaskCount,
+      row(a._id).subtaskDoneCount,
+      row(a._id).childCount,
+    ],
+    [3, 0, 3],
+  );
+  assert.equal(row(b._id).subtaskCount, 0);
+  setTaskState(c2._id, alice, "complete");
+  assert.deepEqual(
+    [
+      row(a._id).subtaskCount,
+      row(a._id).subtaskDoneCount,
+      row(a._id).childCount,
+    ],
+    [3, 1, 2],
+  );
+  setTaskState(c1._id, alice, "complete");
+  setTaskState(c3._id, alice, "complete");
+  const done = tasks(`completed=true&parentTaskId=${a._id}`);
+  assert.equal(done.length, 3);
+  assert.deepEqual(
+    [
+      row(a._id).subtaskCount,
+      row(a._id).subtaskDoneCount,
+      row(a._id).childCount,
+    ],
+    [3, 3, 0],
+  );
+  assert.equal(done.find((t) => t._id === c1._id)!.subtaskDoneCount, 1);
+  setTaskState(a._id, alice, "complete");
+  assert.equal(openCount(), 1);
+  assert.equal(
+    listsFor(alice, null).find((x) => x._id === l._id)!.openTaskCount,
+    1,
+  );
+  const stored = (id: string) => rawTasks(l._id).find((t) => t._id === id)!;
+  assert.equal(enrichTask(stored(a._id)).subtaskCount, 3);
+  assert.equal(enrichTask(stored(b._id)).subtaskCount, 0);
+  assert.ok(!listsFor(bob).some((x) => x._id === l._id));
 });
 test("reordering is atomic when any ID is inaccessible, and cannot cross lists", () => {
   const a = list("reorder-a"),

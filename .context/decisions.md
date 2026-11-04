@@ -3,3 +3,6 @@
 2026-11-04 · Approved round 008-albero-progetti B, Rientro pulito · Material workspace, subtasks in side detail, indented project lists and animated folder disclosure; see docs/DESIGN.md and docs/design/ervisio-todo.html.
 2026-11-04 · Use frontend-design instead of designer for this rework · Explicit user instruction; keep senior-craft, Variant Studio, stop-slop and transitions-dev for motion.
 2026-11-04 · Deliver mockups before changing app code · Approved preview establishes the UI direction; React implementation and Ervisio plugin packaging remain subsequent phases.
+2026-11-04 · Docked detail panel replaces inline subtask expansion · Matches approved mockup; .sub-summary opens the panel, shared logic in taskActions.ts.
+2026-11-04 · Default accent blue #245ac2 / dark sheet #202631 · Mockup tokens; e2e theme assertions updated deliberately.
+2026-11-04 · Keep npm lockfile churn out of commits · npm on Windows strips libc:glibc fields, risking Linux Docker installs.

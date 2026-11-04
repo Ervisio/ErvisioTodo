@@ -4,7 +4,7 @@ import { useCapabilities } from "@/hooks/useCapabilities";
 import { apiFetch as fetch, dataFetcher } from "@/lib/client";
 import { usePreferences } from "@/components/Preferences";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId, useRef } from "react";
 import useSWR from "swr";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -96,9 +96,10 @@ function SubtaskRow({
       >
         <button
           type="button"
+          role="checkbox"
           className="check-task"
-          aria-pressed={task.isCompleted}
-          aria-label={`${t(task.isCompleted ? "Riapri" : "Completa")}: ${task.title}`}
+          aria-checked={task.isCompleted}
+          aria-label={task.title}
           disabled={busy}
           onClick={toggle}
         >
@@ -157,6 +158,10 @@ export function TaskDetailPanel({
   const [includeSubtasks, setIncludeSubtasks] = useState(false);
   const [errorStr, setErrorStr] = useState<string | null>(null);
   const [toggling, setToggling] = useState(false);
+  const headingId = useId(),
+    titleId = useId(),
+    titleRef = useRef<HTMLHeadingElement>(null),
+    closeRef = useRef<HTMLButtonElement>(null);
 
   const { data: task, isLoading } = useSWR<TodoTaskPlain>(
     `/api/admin/todo/tasks/${taskId}`,
@@ -185,8 +190,27 @@ export function TaskDetailPanel({
     done = subtasks.done?.length ?? 0;
 
   useEffect(() => {
+    const origin = document.activeElement as HTMLElement | null;
+    return () => {
+      const active = document.activeElement;
+      if (origin?.isConnected && (!active || active === document.body))
+        origin.focus();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (task) titleRef.current?.focus();
+    else if (!isLoading) closeRef.current?.focus();
+  }, [task?._id, isLoading]);
+
+  useEffect(() => {
     const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (
+        event.key === "Escape" &&
+        !event.defaultPrevented &&
+        !(event.target as Element | null)?.closest?.("dialog[open]")
+      )
+        onClose();
     };
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);
@@ -267,13 +291,12 @@ export function TaskDetailPanel({
 
   return (
     <>
-      <div
-        role="dialog"
-        aria-label="Dettaglio attività"
+      <aside
+        aria-labelledby={task ? `${headingId} ${titleId}` : headingId}
         className="task-detail"
       >
         <header>
-          <h3>{t("Dettaglio attività")}</h3>
+          <h3 id={headingId}>{t("Dettaglio attività")}</h3>
           <div>
             {task && aiEnabled && (
               <button
@@ -300,8 +323,10 @@ export function TaskDetailPanel({
               </button>
             )}
             <button
+              ref={closeRef}
               onClick={onClose}
-              aria-label="Chiudi"
+              title={t("Chiudi")}
+              aria-label={t("Chiudi")}
               className="icon-button"
             >
               <Icon icon={faXmark} />
@@ -321,8 +346,9 @@ export function TaskDetailPanel({
               <div className="detail-status">
                 <span
                   className={`status-dot${task.isCompleted ? " done" : overdue ? " overdue" : ""}`}
+                  aria-hidden="true"
                 />
-                <span>
+                <span role="status">
                   {t(
                     task.isCompleted
                       ? "Completata"
@@ -334,7 +360,8 @@ export function TaskDetailPanel({
                 <button
                   className="icon-button favorite"
                   aria-pressed={task.isFavorite}
-                  aria-label={t(
+                  aria-label={t("Preferita")}
+                  title={t(
                     task.isFavorite
                       ? "Rimuovi dai preferiti"
                       : "Aggiungi ai preferiti",
@@ -344,7 +371,9 @@ export function TaskDetailPanel({
                   <Icon icon={task.isFavorite ? faStar : faStarOutline} />
                 </button>
               </div>
-              <h2>{task.title}</h2>
+              <h2 id={titleId} ref={titleRef} tabIndex={-1}>
+                {task.title}
+              </h2>
 
               <dl className="detail-meta">
                 {list && (
@@ -438,7 +467,11 @@ export function TaskDetailPanel({
                   {done}/{subtasks.total}
                 </span>
               </h3>
-              <div className="detail-subtasks">
+              <div
+                className="detail-subtasks"
+                role="group"
+                aria-label={t("Sottoattività")}
+              >
                 {[...(subtasks.open ?? []), ...(subtasks.done ?? [])].map(
                   (child) => (
                     <SubtaskRow
@@ -500,7 +533,7 @@ export function TaskDetailPanel({
             </button>
           </footer>
         )}
-      </div>
+      </aside>
 
       <AdminModal
         open={showRefactorModal}

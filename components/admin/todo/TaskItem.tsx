@@ -25,7 +25,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { faStar as faStarOutline } from "@fortawesome/free-regular-svg-icons";
 import type { TodoTaskPlain, TodoTagPlain } from "@/types/todo";
-import { useSubtasks, useTaskActions } from "./taskActions";
+import { useTaskActions } from "./taskActions";
 
 function formatDue(
   iso: string | null,
@@ -99,9 +99,9 @@ export function TaskItem({
     zIndex: isDragging ? 50 : undefined,
   };
 
-  const hasChildren = (task.childCount ?? 0) > 0,
-    subtasks = useSubtasks(task.listId, task._id, hasChildren),
-    subtaskTotal = Math.max(subtasks.total, task.childCount ?? 0),
+  const subtaskTotal = task.subtaskCount ?? 0,
+    subtaskDone = task.subtaskDoneCount ?? 0,
+    hasChildren = subtaskTotal > 0,
     due = formatDue(task.dueDate);
 
   async function handleComplete(e: React.MouseEvent) {
@@ -184,8 +184,10 @@ export function TaskItem({
           className="check-task"
           onClick={handleComplete}
           disabled={completing}
-          aria-pressed={completing}
-          title="Segna come completato"
+          role="checkbox"
+          aria-checked={completing}
+          aria-label={task.title}
+          title={t("Segna come completato")}
         >
           <span>{completing && <Icon icon={faCheck} />}</span>
         </button>
@@ -212,7 +214,7 @@ export function TaskItem({
               {hasChildren && (
                 <button
                   type="button"
-                  className="sub-summary"
+                  className={`sub-summary${subtaskDone === subtaskTotal ? " done" : ""}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     onTaskClick(task._id);
@@ -223,7 +225,7 @@ export function TaskItem({
                     {subtaskTotal} {t("sottoattività")}
                   </span>
                   <span className="progress-count">
-                    {subtasks.done?.length ?? 0}/{subtaskTotal}
+                    {subtaskDone}/{subtaskTotal}
                   </span>
                   <span className="summary-chevron">
                     <Icon icon={faChevronRight} />
@@ -317,11 +319,12 @@ export function TaskItem({
             onClick={handleToggleFav}
             disabled={togglingFav}
             aria-pressed={task.isFavorite}
-            title={
+            aria-label={t("Preferita")}
+            title={t(
               task.isFavorite
                 ? "Rimuovi dai preferiti"
-                : "Aggiungi ai preferiti"
-            }
+                : "Aggiungi ai preferiti",
+            )}
           >
             <Icon icon={task.isFavorite ? faStar : faStarOutline} />
           </button>

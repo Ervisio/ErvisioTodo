@@ -5,14 +5,17 @@ import { apiFetch, dataFetcher } from "@/lib/client";
 import { useSounds } from "@/hooks/useSounds";
 import type { TodoTaskPlain } from "@/types/todo";
 
+const LISTS_KEY = "/api/admin/todo/lists";
 const isTaskKey = (key: unknown) =>
   typeof key === "string" && key.startsWith("/api/admin/todo/tasks");
+const isTaskOrListsKey = (key: unknown) => isTaskKey(key) || key === LISTS_KEY;
 
 /** Completion, reopening and cache refresh shared by the task list and the detail panel. */
 export function useTaskActions() {
   const { mutate } = useSWRConfig(),
     { playCompleted } = useSounds();
-  const revalidate = () => mutate(isTaskKey, undefined, { revalidate: true }),
+  const revalidate = () =>
+      mutate(isTaskOrListsKey, undefined, { revalidate: true }),
     /** Drops a task from every cached list without waiting for the refetch. */
     removeFromLists = (id: string) =>
       mutate(

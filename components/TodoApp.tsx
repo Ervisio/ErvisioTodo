@@ -1,5 +1,11 @@
 "use client";
-import { useState, useEffect, useRef, type CSSProperties } from "react";
+import {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type CSSProperties,
+} from "react";
 import { createPortal } from "react-dom";
 import useSWR, { useSWRConfig } from "swr";
 import { Icon } from "@/components/ui/Icon";
@@ -23,6 +29,7 @@ import {
   faShareNodes,
   faXmark,
   faHouse,
+  faChevronRight,
 } from "@fortawesome/free-solid-svg-icons";
 import { THEME_PRESETS, luminance, themeVariables } from "@/lib/themes";
 import { dataFetcher, apiFetch } from "@/lib/client";
@@ -153,6 +160,49 @@ export default function TodoApp({
     selectedList ? `/api/admin/todo/tags?listId=${selectedList._id}` : null,
     dataFetcher,
   );
+  const tabsRef = useRef<HTMLDivElement>(null),
+    hasTabs = !isLoading && contextLists.length > 0;
+  useLayoutEffect(() => {
+    const bar = tabsRef.current;
+    if (!bar) return;
+    const place = () => {
+      const active = bar.querySelector<HTMLElement>('[aria-pressed="true"]');
+      if (!active) return;
+      bar.style.setProperty("--pill-x", `${active.offsetLeft}px`);
+      bar.style.setProperty("--pill-w", `${active.offsetWidth}px`);
+    };
+    place();
+    const frame = requestAnimationFrame(() => {
+      bar.dataset.ready = "true";
+    });
+    const observer = new ResizeObserver(place);
+    observer.observe(bar);
+    bar
+      .querySelectorAll("button")
+      .forEach((button) => observer.observe(button));
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [tab, hasTabs]);
+  const [detailId, setDetailId] = useState<string | null>(null),
+    detailClosing = !selectedTaskId && !!detailId;
+  useEffect(() => {
+    if (selectedTaskId) setDetailId(selectedTaskId);
+  }, [selectedTaskId]);
+  useEffect(() => {
+    if (!detailClosing) return;
+    const duration = parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue(
+        "--panel-close",
+      ),
+    );
+    const timer = setTimeout(
+      () => setDetailId(null),
+      duration ? duration + 80 : 0,
+    );
+    return () => clearTimeout(timer);
+  }, [detailClosing]);
   useEffect(() => {
     if (initialized.current || isLoading) return;
     initialized.current = true;
@@ -300,7 +350,7 @@ export default function TodoApp({
       (current) => current,
       { revalidate: true },
     );
-    await refreshProjects();
+    await Promise.all([refreshLists(), refreshProjects()]);
   }
   async function remove(kind: "project" | "list" | "clear") {
     const target =
@@ -391,6 +441,9 @@ export default function TodoApp({
               >
                 <ListIcon list={list} />
                 <span className="nav-label">{list.title}</span>
+                {!!list.openTaskCount && (
+                  <span className="list-count">{list.openTaskCount}</span>
+                )}
               </button>
             ))}
             <button
@@ -410,6 +463,14 @@ export default function TodoApp({
       </div>
     );
   }
+  const crumbs = [
+    ...(selectedProject
+      ? [selectedProject.title]
+      : selectedProjectId === undefined
+        ? [t("Panoramica")]
+        : []),
+    ...(selectedList ? [selectedList.title] : []),
+  ];
   const listActions = preferences.view === "list" && !!selectedList,
     menuGroups: MenuGroup[] = [];
   if (listActions && selectedList)
@@ -657,6 +718,24 @@ export default function TodoApp({
       >
         <div className="workspace-heading">
           <div className="workspace-title">
+            {crumbs.length > 0 && (
+              <nav className="workspace-crumb" aria-label={t("Percorso")}>
+                <ol>
+                  {crumbs.map((crumb, index) => (
+                    <li key={index}>
+                      {index > 0 && <Icon icon={faChevronRight} />}
+                      <span
+                        aria-current={
+                          index === crumbs.length - 1 ? "page" : undefined
+                        }
+                      >
+                        {crumb}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </nav>
+            )}
             <h1>
               {selectedProject?.title ||
                 (selectedList ? selectedList.title : t("Il tuo spazio"))}
@@ -738,7 +817,8 @@ export default function TodoApp({
             </nav>
             <div className="task-toolbar">
               <div className="workspace-view-row">
-                <div className="task-tabs">
+                <div className="task-tabs" ref={tabsRef}>
+                  <span className="tab-pill" aria-hidden="true" />
                   {(["active", "favorites", "completed"] as const).map(
                     (status) => (
                       <button
@@ -867,17 +947,31 @@ export default function TodoApp({
                   ))}
                 </div>
               )}
-              {selectedTaskId && (
-                <TaskDetailPanel
-                  taskId={selectedTaskId}
-                  onClose={() => setSelectedTaskId(null)}
-                  onEdit={(task) => {
-                    setSelectedTaskId(null);
-                    editTask(task);
+              {(selectedTaskId || detailId) && (
+                <div
+                  className="detail-slot"
+                  data-closing={detailClosing || undefined}
+                  onAnimationEnd={(event) => {
+                    if (
+                      detailClosing &&
+                      (event.target as HTMLElement).classList.contains(
+                        "task-detail",
+                      )
+                    )
+                      setDetailId(null);
                   }}
-                  onAddSubtask={(task) => newTask(task.listId, task._id)}
-                  onOpenTask={setSelectedTaskId}
-                />
+                >
+                  <TaskDetailPanel
+                    taskId={(selectedTaskId || detailId)!}
+                    onClose={() => setSelectedTaskId(null)}
+                    onEdit={(task) => {
+                      setSelectedTaskId(null);
+                      editTask(task);
+                    }}
+                    onAddSubtask={(task) => newTask(task.listId, task._id)}
+                    onOpenTask={setSelectedTaskId}
+                  />
+                </div>
               )}
             </div>
           </>

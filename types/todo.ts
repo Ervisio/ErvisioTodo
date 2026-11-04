@@ -43,6 +43,8 @@ export interface TodoListPlain {
   aiContext?: string;
   createdAt: string;
   updatedAt: string;
+  /** Open top-level tasks, as listed by the active tab (returned by the lists API) */
+  openTaskCount?: number;
 }
 
 // ─── TodoTag ─────────────────────────────────────────────────────────────────
@@ -133,8 +135,12 @@ export interface TodoTaskPlain {
   };
   createdAt: string;
   updatedAt: string;
-  /** Number of direct children (returned by API) */
+  /** Number of open direct children (returned by API) */
   childCount?: number;
+  /** Number of direct children, open and completed (returned by API) */
+  subtaskCount?: number;
+  /** Number of completed direct children (returned by API) */
+  subtaskDoneCount?: number;
 }
 
 export interface TodoProjectPlain {

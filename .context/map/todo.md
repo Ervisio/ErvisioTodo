@@ -3,7 +3,12 @@
 Purpose: Workspace navigation, task trees, project membership and read-only public links.
 Entry points: app/page.tsx; app/l/[slug]/page.tsx; app/p/[slug]/page.tsx; app/s/[token]/page.tsx; components/TodoApp.tsx.
 Flow: pageUser and route selection → TodoApp/SWR → /api/admin/todo/* → lib/server/todo.ts, projects.ts, task-transfer.ts or shares.ts → SQLite.
-UI: components/admin/todo/ holds forms, task panes, detail panels, tags and ShareManager; TodoApp owns project/list navigation and mutations.
+UI: components/admin/todo/ holds forms, task panes, detail panels, tags and ShareManager; TodoApp owns project/list navigation, sidebar search query and mutations.
+Task rows: TaskItem never expands children inline. Rows with subtasks show a .sub-summary button that calls onTaskClick, which opens the docked TaskDetailPanel (subtask checklist, onOpenTask to walk the tree). TodoApp selectedTaskId drives the row highlight through ListTaskPane selectedId.
+Shared actions: components/admin/todo/taskActions.ts (useTaskActions: complete, reopen, remove, revalidate, removeFromLists; useSubtasks: open and completed children) is used by TaskItem and TaskDetailPanel. Reuse it instead of duplicating fetch or SWR mutate logic.
+Overflow menu: components/ui/OverflowMenu.tsx renders TodoApp's "Altre azioni" groups (tag, list and project actions).
+Search: the sidebar input in TodoApp sets query state, which ListTaskPane sends as ?q= to /api/admin/todo/tasks. There is no header search and no window event; do not reintroduce ervisio:search.
+Creation: the per-project "+" in the sidebar calls TodoApp newList(projectId).
 Invariants:
 
 - TodoApp selectedProjectId is tri-state: undefined means overview, null means standalone lists, string means one project. Route initialization waits for lists.
@@ -15,7 +20,9 @@ Invariants:
 - task-transfer.ts:transferTask remaps subtree parents and clones private files across lists; moves cannot introduce cycles.
 - Public shares require list ownership and workspace sharing permission; only the digest is stored and the raw URL is returned once.
 - Shared output is read-only, excludes assignments/attachments and respects expiry, revocation and global sharing disablement.
+- Subtasks are visible only in the detail panel; list rows show count and progress.
+- ListTaskPane takes no onDeleted callback. After a delete, taskActions drops the task from every cached task list and revalidates.
   AI: lib/server/ai.ts:aiGenerate proposes content; aiRefactor saves changes and optional subtasks. It sends list/task text to the configured chat/completions service, uses a 45-second timeout and validates JSON output. Production endpoints require HTTPS.
-  Gotchas: Keep public-share rendering separate from authenticated list data; do not serialize unrestricted task objects into shared responses.
+  Gotchas: Keep public-share rendering separate from authenticated list data; do not serialize unrestricted task objects into shared responses. Counts come from SQL, not per-row fetches: the lists API adds openTaskCount (open top-level tasks, as the active tab) and tasksFor adds subtaskCount/subtaskDoneCount (direct children) beside childCount (open children). useTaskActions.revalidate refreshes task keys and the lists key.
   Verification: tests/todo.test.ts covers membership, trees, transfer, share filtering and project deletion; tests/app.spec.ts covers project navigation, task editing and desktop/mobile flows.
   Related: map/auth-api.md, map/storage.md, map/settings-ui.md.

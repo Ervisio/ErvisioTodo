@@ -150,6 +150,15 @@ export function listMemberIds(list: TodoListPlain) {
   ];
 }
 export function listsFor(userId: string, projectId?: string | null) {
+  const open = new Map(
+    (
+      db()
+        .prepare(
+          "SELECT list_id, count(*) AS n FROM tasks WHERE parent_id IS NULL AND json_extract(data,'$.isCompleted')=0 GROUP BY list_id",
+        )
+        .all() as { list_id: string; n: number }[]
+    ).map((r) => [r.list_id, r.n]),
+  );
   return (db().prepare("SELECT data FROM lists ORDER BY rowid").all() as Row[])
     .map((r) => ({ projectId: null, ...JSON.parse(r.data) }) as TodoListPlain)
     .filter(
@@ -157,7 +166,8 @@ export function listsFor(userId: string, projectId?: string | null) {
         listAccess(l, userId) &&
         tokenAllowsList(l) &&
         (projectId === undefined || l.projectId === projectId),
-    );
+    )
+    .map((l) => ({ ...l, openTaskCount: open.get(l._id) ?? 0 }));
 }
 export function listBySlug(slug: string, userId: string) {
   const row = db().prepare("SELECT id FROM lists WHERE slug=?").get(slug) as
@@ -329,21 +339,33 @@ export function getTask(id: string, userId: string) {
   getList(task.listId, userId);
   return task;
 }
-export function enrichTask(task: TodoTaskPlain) {
+type ChildCounts = Map<string, { total: number; done: number }>;
+function childCounts(listId: string, parentId?: string): ChildCounts {
+  const rows = db()
+    .prepare(
+      `SELECT parent_id, count(*) AS total, sum(json_extract(data,'$.isCompleted')) AS done FROM tasks WHERE list_id=?${parentId ? " AND parent_id=?" : " AND parent_id IS NOT NULL"} GROUP BY parent_id`,
+    )
+    .all(...(parentId ? [listId, parentId] : [listId])) as {
+    parent_id: string;
+    total: number;
+    done: number;
+  }[];
+  return new Map(rows.map((r) => [r.parent_id, r]));
+}
+export function enrichTask(
+  task: TodoTaskPlain,
+  counts = childCounts(task.listId, task._id),
+) {
   const user = (id: string | null) => {
     const u = id ? byId(id) : undefined;
     return u ? publicUser(u) : undefined;
   };
-  const childCount = (
-    db()
-      .prepare(
-        "SELECT count(*) AS n FROM tasks WHERE parent_id=? AND json_extract(data,'$.isCompleted')=0",
-      )
-      .get(task._id) as { n: number }
-  ).n;
+  const children = counts.get(task._id) ?? { total: 0, done: 0 };
   return {
     ...task,
-    childCount,
+    childCount: children.total - children.done,
+    subtaskCount: children.total,
+    subtaskDoneCount: children.done,
     assignedToUsers: task.assignedTo.map(user).filter(Boolean),
     completedByUser: user(task.completedBy),
     createdByUser: user(task.createdBy),
@@ -376,6 +398,7 @@ export function tasksFor(
         }
       }
   }
+  const counts = childCounts(listId);
   return all
     .filter((t) => {
       if (matched && !matched.has(t._id)) return false;
@@ -392,7 +415,7 @@ export function tasksFor(
       return tags.every((tag) => t.tags.includes(tag));
     })
     .sort((a, b) => a.order - b.order)
-    .map(enrichTask);
+    .map((t) => enrichTask(t, counts));
 }
 function checkTaskReferences(
   data: z.infer<typeof taskFields>,

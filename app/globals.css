@@ -597,6 +597,15 @@ input[type="radio"] {
   max-width: 16px;
   max-height: 16px;
 }
+.list-count {
+  justify-self: end;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: rgb(var(--ink-dim));
+}
+.sidebar-list.active .list-count {
+  color: inherit;
+}
 .sidebar-footer {
   margin-top: auto;
   padding-top: 20px;
@@ -629,6 +638,7 @@ input[type="radio"] {
 }
 .sidebar-collapsed .sidebar-top > span,
 .sidebar-collapsed .nav-label,
+.sidebar-collapsed .list-count,
 .sidebar-collapsed .sidebar-label,
 .sidebar-collapsed .sidebar-storage,
 .sidebar-collapsed .project-expand,
@@ -694,6 +704,35 @@ input[type="radio"] {
 }
 .workspace-title {
   min-width: 0;
+}
+.workspace-crumb {
+  margin-bottom: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.workspace-crumb ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: rgb(var(--ink-dim));
+}
+.workspace-crumb li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.workspace-crumb svg {
+  width: 8px;
+}
+.workspace-crumb [aria-current="page"] {
+  font-weight: 600;
+  color: rgb(var(--fg));
+  overflow-wrap: anywhere;
 }
 .workspace-title h1 {
   margin: 0;
@@ -786,6 +825,10 @@ input[type="radio"] {
 .overflow-menu [role="menuitem"]:focus-visible {
   outline-offset: -2px;
 }
+.overflow-menu [role="menuitem"][aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: default;
+}
 .task-toolbar {
   display: flex;
   align-items: center;
@@ -802,11 +845,31 @@ input[type="radio"] {
   min-width: 0;
 }
 .task-tabs {
+  position: relative;
+  isolation: isolate;
   display: flex;
   align-items: center;
   gap: 5px;
 }
+.tab-pill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: -1;
+  width: var(--pill-w, 0);
+  height: 100%;
+  border-radius: 22px;
+  background: var(--accent-soft);
+  transform: translateX(var(--pill-x, 0));
+  pointer-events: none;
+}
+.task-tabs[data-ready] .tab-pill {
+  transition:
+    transform var(--tabs-dur) var(--ease),
+    width var(--tabs-dur) var(--ease);
+}
 .task-tabs > button {
+  position: relative;
   display: flex;
   align-items: center;
   height: 38px;
@@ -815,15 +878,12 @@ input[type="radio"] {
   font-size: 12px;
   white-space: nowrap;
   color: rgb(var(--ink-dim));
-  transition:
-    background var(--tabs-dur) var(--ease),
-    color var(--tabs-dur) var(--ease);
+  transition: color var(--tabs-dur) var(--ease);
 }
 .task-tabs > button:hover {
   color: var(--accent-ink);
 }
 .task-tabs > button[aria-pressed="true"] {
-  background: var(--accent-soft);
   color: var(--accent-ink);
   font-weight: 600;
 }
@@ -1065,7 +1125,8 @@ input[type="radio"] {
     background var(--check-box),
     border-color var(--check-box);
 }
-.check-task[aria-pressed="true"] > span {
+.check-task[aria-pressed="true"] > span,
+.check-task[aria-checked="true"] > span {
   background: var(--accent);
   border-color: var(--accent);
 }
@@ -1135,6 +1196,10 @@ input[type="radio"] {
   background: var(--surface);
   font-size: 10px;
   color: rgb(var(--ink-dim));
+}
+.sub-summary.done .progress-count {
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  color: var(--success);
 }
 .summary-chevron {
   display: flex;
@@ -1214,6 +1279,13 @@ input[type="radio"] {
   border-radius: 20px;
   background: var(--canvas);
   animation: detail-in var(--panel-open) var(--ease) both;
+}
+.detail-slot {
+  display: contents;
+}
+.detail-slot[data-closing] > .task-detail {
+  animation: detail-out var(--panel-close) var(--ease) both;
+  pointer-events: none;
 }
 .task-detail > header {
   display: flex;
@@ -2022,6 +2094,18 @@ input[type="radio"] {
     transform: translateX(0);
   }
 }
+@keyframes detail-out {
+  to {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+}
+@keyframes mobile-detail-out {
+  to {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
 @keyframes mobile-detail-in {
   from {
     opacity: 0;
@@ -2294,6 +2378,12 @@ input[type="radio"] {
     border-radius: 24px 24px 0 0;
     background: var(--sheet);
     animation-name: mobile-detail-in;
+  }
+  .detail-slot[data-closing] > .task-detail {
+    animation-name: mobile-detail-out;
+  }
+  .workspace-crumb {
+    display: none;
   }
   .detail-meta,
   .task-detail > footer .secondary {

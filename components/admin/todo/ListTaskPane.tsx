@@ -21,6 +21,7 @@ import { Icon } from "@/components/ui/Icon";
 import { TaskItem } from "./TaskItem";
 import { CompletedTasksTab } from "./CompletedTasksTab";
 import { apiFetch, dataFetcher } from "@/lib/client";
+import { useTaskActions } from "./taskActions";
 import { usePreferences } from "@/components/Preferences";
 import type { TodoListPlain, TodoTaskPlain, TodoTagPlain } from "@/types/todo";
 export function ListTaskPane({
@@ -43,6 +44,7 @@ export function ListTaskPane({
   selectedId: string | null;
 }) {
   const { t } = usePreferences(),
+    { revalidate } = useTaskActions(),
     [ordered, setOrdered] = useState<TodoTaskPlain[] | null>(null),
     sensors = useSensors(
       useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -86,7 +88,7 @@ export function ListTaskPane({
     }
   }
   if (tab === "completed")
-    return <CompletedTasksTab listId={list._id} onChanged={() => mutate()} />;
+    return <CompletedTasksTab listId={list._id} onChanged={revalidate} />;
   return (
     <section
       className="task-area"

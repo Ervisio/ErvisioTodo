@@ -120,10 +120,7 @@ test("registration, login, complete task workflow, permissions, recovery and mob
       }),
     }),
   );
-  await page
-    .getByRole("button", { name: "Segna come completato" })
-    .first()
-    .click();
+  await page.locator(".check-task").first().click();
   await expect(
     page
       .getByRole("alert")
@@ -173,7 +170,9 @@ test("registration, login, complete task workflow, permissions, recovery and mob
     .locator(`[data-task-row="${task._id}"]`)
     .getByRole("button", { name: /sottoattività/ })
     .click();
-  const detail = page.getByRole("dialog", { name: "Dettaglio attività" });
+  const detail = page.getByRole("complementary", {
+    name: "Dettaglio attività",
+  });
   await expect(
     detail.getByText("Verificare Docker", { exact: true }),
   ).toBeVisible();
@@ -999,16 +998,16 @@ test("themes stay consistent across lists, navigation and reload; custom themes 
   ).toBeVisible();
   expect(await colors()).toMatchObject({ sheet: "#0d1b2a", palette: customId });
   await page.getByText("Controllare i temi", { exact: true }).click();
-  await expect(page.getByRole("dialog")).toBeVisible();
+  const detail = page.getByRole("complementary", {
+    name: /Dettaglio attività/,
+  });
+  await expect(detail).toBeVisible();
   expect(
-    await page
-      .getByRole("dialog")
-      .evaluate((element) => getComputedStyle(element).backgroundColor),
+    await detail.evaluate(
+      (element) => getComputedStyle(element).backgroundColor,
+    ),
   ).toBe("rgb(7, 17, 31)");
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Chiudi", exact: true })
-    .click();
+  await detail.getByRole("button", { name: "Chiudi", exact: true }).click();
   await page.goto("/settings");
   await page
     .getByRole("button", {

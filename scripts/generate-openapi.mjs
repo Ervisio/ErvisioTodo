@@ -88,7 +88,12 @@ schemas.List = {
     ref("ListInput"),
     {
       type: "object",
-      properties: { ...metadata, createdBy: id, order: { type: "integer" } },
+      properties: {
+        ...metadata,
+        createdBy: id,
+        order: { type: "integer" },
+        openTaskCount: { type: "integer" },
+      },
     },
   ],
 };
@@ -105,6 +110,8 @@ schemas.Task = {
         completedAt: { type: ["string", "null"], format: "date-time" },
         completedBy: { type: ["string", "null"] },
         childCount: { type: "integer" },
+        subtaskCount: { type: "integer" },
+        subtaskDoneCount: { type: "integer" },
         assignedToUsers: { type: "array", items: ref("User") },
         createdByUser: ref("User"),
         completedByUser: ref("User"),

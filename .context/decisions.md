@@ -6,3 +6,6 @@
 2026-11-04 · Docked detail panel replaces inline subtask expansion · Matches approved mockup; .sub-summary opens the panel, shared logic in taskActions.ts.
 2026-11-04 · Default accent blue #245ac2 / dark sheet #202631 · Mockup tokens; e2e theme assertions updated deliberately.
 2026-11-04 · Keep npm lockfile churn out of commits · npm on Windows strips libc:glibc fields, risking Linux Docker installs.
+2026-11-04 · Package as Ervisio plugin mirroring ErvisioRepo (unix-socket admin API, Docker-only install) · Same contract as repo plugin; see .context/plugin-contract.md.
+2026-11-04 · Repo and GHCR image public · Registry register workflow and anonymous docker pull need them.
+2026-11-04 · If Pages deploy hangs in Ervisio/plugins Publish, dispatch a fresh run instead of rerunning · Reruns reuse the stuck deployment for the same SHA.

@@ -88,7 +88,12 @@ schemas.List = {
     ref("ListInput"),
     {
       type: "object",
-      properties: { ...metadata, createdBy: id, order: { type: "integer" } },
+      properties: {
+        ...metadata,
+        createdBy: id,
+        order: { type: "integer" },
+        openTaskCount: { type: "integer" },
+      },
     },
   ],
 };
@@ -105,6 +110,8 @@ schemas.Task = {
         completedAt: { type: ["string", "null"], format: "date-time" },
         completedBy: { type: ["string", "null"] },
         childCount: { type: "integer" },
+        subtaskCount: { type: "integer" },
+        subtaskDoneCount: { type: "integer" },
         assignedToUsers: { type: "array", items: ref("User") },
         createdByUser: ref("User"),
         completedByUser: ref("User"),
@@ -1210,7 +1217,7 @@ writeFileSync(
       openapi: "3.1.0",
       info: {
         title: "ErvisioTodo",
-        version: "0.2.0",
+        version: "0.3.0",
         description:
           "API con sessione HTTP-only e token Bearer personali. Auth.js /api/auth/* usa il proprio protocollo CSRF/OAuth ed è documentato dal progetto Auth.js. Nessuna API key pubblica. Vedi API.md per permessi e semantica.",
       },

@@ -13,3 +13,6 @@ backups/
 .variant-studio/
 .context/now.md
 .context/.last-nudge
+.playwright-mcp/
+
+run/

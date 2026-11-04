@@ -120,6 +120,6 @@ export function transferTask(
       result.push(next);
     }
     recordActivity(userId, copy ? "task.copy" : "task.move", id);
-    return { task: enrichTask(result[0]), tasks: result.map(enrichTask) };
+    return { task: enrichTask(result[0]), tasks: result.map((t) => enrichTask(t)) };
   });
 }

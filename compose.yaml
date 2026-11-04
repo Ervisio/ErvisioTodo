@@ -1,7 +1,8 @@
+name: ervisiotodo
 services:
   app:
     build: .
-    image: ervisio-todo:local
+    image: ghcr.io/ervisio/ervisio-todo:${ERVISIO_VERSION:-0.3.0}
     restart: unless-stopped
     init: true
     env_file: .env
@@ -12,6 +13,8 @@ services:
       - "127.0.0.1:${PORT:-3000}:3000"
     volumes:
       - todo-data:/app/data
+      # Ervisio plugin socket (PLUGIN_SOCKET=/run/ervisio-todo/api.sock in .env).
+      - ${ERVISIO_SOCKET_DIR:-./run}:/run/ervisio-todo
     security_opt:
       - no-new-privileges:true
     cap_drop:

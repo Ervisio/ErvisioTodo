@@ -1,25 +1,21 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import useSWR from "swr";
 import { Icon } from "@/components/ui/Icon";
 import {
   faCheck,
-  faMagnifyingGlass,
   faGear,
   faRightFromBracket,
   faBars,
   faCode,
+  faFolderOpen,
 } from "@fortawesome/free-solid-svg-icons";
 import { usePreferences } from "./Preferences";
 import { dataFetcher } from "@/lib/client";
-export function AppHeader({ name, role }: { name: string; role: string }) {
+export function AppHeader({ name }: { name: string; role: string }) {
   const { t } = usePreferences(),
-    { data } = useSWR("/api/public", dataFetcher),
-    path = usePathname(),
-    workspace =
-      path === "/" || path.startsWith("/l/") || path.startsWith("/p/");
+    { data } = useSWR("/api/public", dataFetcher);
   return (
     <header className="app-header">
       <button
@@ -44,26 +40,14 @@ export function AppHeader({ name, role }: { name: string; role: string }) {
           )}
         </span>
       </Link>
-      {workspace ? (
-        <label className="header-search">
-          <Icon icon={faMagnifyingGlass} />
-          <input
-            type="search"
-            aria-label={t("Cerca nelle attività")}
-            placeholder={t("Cerca nelle attività")}
-            onChange={(e) =>
-              window.dispatchEvent(
-                new CustomEvent("ervisio:search", { detail: e.target.value }),
-              )
-            }
-          />
-        </label>
-      ) : (
-        <div className="header-spacer" />
-      )}
       <nav aria-label={t("Account")}>
-        <Link href="/" className="header-project-link">
-          {t("Progetti")}
+        <Link
+          href="/"
+          className="header-project-link"
+          aria-label={t("Progetti")}
+          title={t("Progetti")}
+        >
+          <Icon icon={faFolderOpen} />
         </Link>
         <Link href="/api-docs" title="API" aria-label="Documentazione API">
           <Icon icon={faCode} />
@@ -71,18 +55,18 @@ export function AppHeader({ name, role }: { name: string; role: string }) {
         <Link
           href="/settings"
           className="header-settings-link"
+          aria-label={t("Impostazioni")}
           title={t("Impostazioni")}
         >
           <Icon icon={faGear} />
-          <span>{t("Impostazioni")}</span>
         </Link>
         <Link
           href="/account"
           className="user-link"
           aria-label={t("Il tuo account")}
+          title={name}
         >
           <span className="avatar">{name.slice(0, 2).toUpperCase()}</span>
-          <span className="max-md:hidden">{name}</span>
         </Link>
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}

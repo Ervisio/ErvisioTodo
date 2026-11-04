@@ -1,0 +1,288 @@
+/* Based on Ervisio/plugin-caddy (src/styles/base.css), MIT License, Copyright (c) 2026 Fonlogen.
+   Class prefix renamed from cd- to td-. See LICENSE-plugin-caddy. */
+/* ErvisioTodo plugin: theme tokens only (--bg --surface --sunk --raise --ink --ink2 --ink3, --h-*, --ok --warn --err --info).
+   Accent = the term hue. No divider lines: spacing and tinted surfaces instead. Small grey text uses --ink2. */
+.td-root {
+  --acc: var(--h-term);
+  --acc-s: var(--h-term-s);
+  --on-acc: #000;
+  --td-mono: var(--mono, "JetBrains Mono", ui-monospace, monospace);
+  --td-ctl: var(--r-ctl, 12px);
+  --td-card: var(--r-card, 18px);
+  /* Not part of the core tokens (design/DESIGN.md): defined here or every --raise surface is transparent. */
+  --raise: #222226;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  min-height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+/* Light theme: the term hue is too pale for white text and for the ok colour on light surfaces. */
+.td-root.td-light {
+  --raise: #f0f0f3;
+  --acc: #0a6f5f;
+  --on-acc: #fff;
+  --ok: #0b6a45;
+}
+.td-light .ui-btn--primary {
+  background: var(--acc);
+  color: var(--on-acc);
+}
+.td-root *,
+.td-root *::before,
+.td-root *::after {
+  box-sizing: border-box;
+}
+.td-root :where(button:not([class*="ui-"])) {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+}
+.td-root button:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
+.td-mono {
+  font-family: var(--td-mono);
+  font-size: 12.5px;
+  font-variant-ligatures: none;
+}
+.td-muted {
+  color: var(--ink2);
+  font-size: 13px;
+}
+.td-pad {
+  padding: 8px 14px;
+  margin: 0;
+}
+.td-sp {
+  flex: 1;
+}
+.td-block {
+  display: block;
+  margin-top: 6px;
+}
+.td-pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.td-acts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* status pill */
+.td-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 700;
+  background: var(--ok-s);
+  color: var(--ok);
+  white-space: nowrap;
+  flex: none;
+}
+.td-pill::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.td-pill.is-warn {
+  background: var(--warn-s);
+  color: var(--warn);
+}
+.td-pill.is-err {
+  background: var(--err-s);
+  color: var(--err);
+}
+.td-pill.is-info {
+  background: var(--info-s);
+  color: var(--info);
+}
+.td-pill.is-off {
+  background: var(--raise);
+  color: var(--ink2);
+}
+
+/* notes (Address, Connect, Storage) */
+.td-note {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 13px;
+}
+.td-note > .ui-icon {
+  flex: none;
+  margin-top: 1px;
+  color: var(--ink2);
+}
+.td-note .ui-btn {
+  flex: none;
+}
+.td-note.is-ok {
+  background: var(--ok-s);
+}
+.td-note.is-ok > .ui-icon {
+  color: var(--ok);
+}
+.td-note.is-warn {
+  background: var(--warn-s);
+}
+.td-note.is-warn > .ui-icon {
+  color: var(--warn);
+}
+.td-note.is-err {
+  background: var(--err-s);
+}
+.td-note.is-err > .ui-icon {
+  color: var(--err);
+}
+.td-note.is-info {
+  background: var(--info-s);
+}
+.td-note.is-info > .ui-icon {
+  color: var(--info);
+}
+
+/* error and success blocks */
+.td-err {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: var(--td-card);
+  background: var(--err-s);
+}
+.td-err > .ui-icon {
+  color: var(--err);
+  flex: none;
+  margin-top: 2px;
+}
+.td-err > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.td-err b {
+  font-weight: 800;
+}
+.td-err span {
+  color: var(--ink2);
+  font-size: 13px;
+}
+.td-msg {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--err);
+  font-size: 13px;
+  font-weight: 600;
+}
+.td-msg .ui-icon {
+  flex: none;
+}
+.td-msg-list {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.td-msg-list > span {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.td-msg code {
+  font-family: var(--td-mono);
+  font-size: 12px;
+}
+.td-ok-msg {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--ok);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* code blocks */
+.td-snip {
+  margin: 0;
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: 12.5px/1.55 var(--td-mono);
+  color: var(--ink2);
+  overflow: auto;
+  white-space: pre;
+}
+.td-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.td-steps li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.td-steps .ui-icon {
+  color: var(--ok);
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+/* log viewer */
+.td-term {
+  background: var(--bg);
+  border-radius: 14px;
+  padding: 10px 0;
+  font-family: var(--td-mono);
+  font-size: 12px;
+  line-height: 1.65;
+  font-variant-ligatures: none;
+  overflow: auto;
+  max-height: 360px;
+  color: var(--ink2);
+}
+.td-term > div {
+  padding: 0 14px;
+  white-space: pre;
+}
+.td-term .t {
+  color: var(--ink2);
+}
+.td-term .w {
+  color: var(--warn);
+}
+.td-term .e {
+  color: var(--err);
+}
+
+/* Inputs sit on --sunk cards: they use the page background. */
+.td-card .ui-in {
+  background: var(--bg);
+}

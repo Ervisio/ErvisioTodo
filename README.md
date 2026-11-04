@@ -71,6 +71,16 @@ docker compose -f compose.yaml -f compose.caddy.yaml up -d --build
 
 Caddy espone 80/443 TCP e 443 UDP e conserva certificati/configurazione in volumi propri. Se Caddy esiste già in Docker, mettilo sulla stessa rete dell’app e usa `reverse_proxy app:3000` oppure inoltra al binding locale tramite l’host appropriato. Lo snippet scaricabile dall’editor della lista usa `app:3000` per Docker e `127.0.0.1:3000` per standalone.
 
+## Plugin Ervisio
+
+Il plugin Ervisio (cartella `plugin/`) installa e gestisce ErvisioTodo con Docker e ne mostra stato e impostazioni nel pannello Ervisio. Il collegamento è un socket unix di amministrazione: con `PLUGIN_SOCKET` impostato, `scripts/plugin-socket.mjs` ascolta sul socket (0660), accetta solo `/api/plugin/*` (altrimenti 404), limita i body a 1 MiB e inoltra al server Next su `127.0.0.1:PORT` aggiungendo l’header `x-ervisio-plugin` con un segreto casuale generato a ogni avvio (`PLUGIN_SECRET`; eventuali header in ingresso sono scartati). Le route in `app/api/plugin/` rispondono 404 senza il segreto, quindi non sono utilizzabili dalla porta pubblica. Il contratto è in `.context/plugin-contract.md`.
+
+```sh
+deploy/ervisio-setup.sh --url https://todo.example.com
+```
+
+Lo script (non interattivo, rilanciabile) scrive `.env` solo se manca (altrimenti conserva `AUTH_SECRET` e aggiorna `AUTH_URL`) con `PLUGIN_SOCKET=/run/ervisio-todo/api.sock` e `ERVISIO_SOCKET_DIR=/run/ervisio-todo`, crea la cartella per l’utente `node` (uid 1000) con una voce `tmpfiles.d`, poi esegue `docker compose pull app` (in alternativa `build`) e `up -d --wait`. `ERVISIO_VERSION` sceglie il tag di `ghcr.io/ervisio/ervisio-todo`. Il socket è facoltativo: senza `PLUGIN_SOCKET` l’app funziona come prima.
+
 ## URL, sottodomini e Caddy
 
 Esempio: `AUTH_URL=https://todo.example.com`, `BASE_DOMAIN=example.com`, `AUTH_COOKIE_DOMAIN=.example.com`.

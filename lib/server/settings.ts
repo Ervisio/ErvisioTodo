@@ -95,7 +95,11 @@ export function pruneActivity() {
       .prepare("DELETE FROM activity WHERE created_at<?")
       .run(Date.now() - days * 86400000);
 }
-export function recordActivity(actor: string, action: string, resource = "") {
+export function recordActivity(
+  actor: string | null,
+  action: string,
+  resource = "",
+) {
   pruneActivity();
   db()
     .prepare(

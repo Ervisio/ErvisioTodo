@@ -14,3 +14,5 @@ backups/
 .context/now.md
 .context/.last-nudge
 .playwright-mcp/
+
+run/

@@ -9,3 +9,4 @@
 - archive/: finished tasks (ui-ux-mockups, ui-port). Read only if asked.
 - map/storage.md: SQLite, migrations, uploads and backups. Read before persistence changes.
 - map/deployment.md: standalone artifacts, Docker, Caddy and verification commands. Read before runtime changes.
+- plugin-contract.md: Ervisio plugin socket API contract and plugin-side duties. Read before plugin or socket changes.

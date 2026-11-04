@@ -11,3 +11,7 @@ playwright-report
 backups/
 
 .variant-studio/
+
+run
+plugin
+.github

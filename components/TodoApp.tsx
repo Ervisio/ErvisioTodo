@@ -4,12 +4,13 @@ import { createPortal } from "react-dom";
 import useSWR, { useSWRConfig } from "swr";
 import { Icon } from "@/components/ui/Icon";
 import { ListIcon } from "@/components/ui/ListIcon";
+import { OverflowMenu, type MenuGroup } from "@/components/ui/OverflowMenu";
 import {
   faBars,
   faPlus,
   faFolder,
   faChevronDown,
-  faChevronRight,
+  faMagnifyingGlass,
   faStar,
   faLayerGroup,
   faList,
@@ -95,6 +96,7 @@ export default function TodoApp({
       new Set(initialProjectId ? [initialProjectId] : []),
     ),
     [mobileOpen, setMobileOpen] = useState(false),
+    [listProjectId, setListProjectId] = useState<string | null>(null),
     [tooltip, setTooltip] = useState<{
       text: string;
       x: number;
@@ -121,6 +123,8 @@ export default function TodoApp({
     [shareListId, setShareListId] = useState<string | null>(null),
     [error, setError] = useState("");
   const initialized = useRef(false),
+    searchRef = useRef<HTMLInputElement>(null),
+    collapsed = preferences.sidebarCollapsed && !mobileOpen,
     selectedList = lists.find((list) => list._id === selectedListId) || null,
     selectedProject =
       projects.find(
@@ -139,6 +143,12 @@ export default function TodoApp({
         (p) => p._id === list.projectId && p.createdBy === currentUserId,
       ),
     isProjectOwner = selectedProject?.createdBy === currentUserId;
+  const { data: activeTasks } = useSWR<TodoTaskPlain[]>(
+    selectedList
+      ? `/api/admin/todo/tasks?listId=${selectedList._id}&parentTaskId=null`
+      : null,
+    dataFetcher,
+  );
   const { data: tags = [] } = useSWR<TodoTagPlain[]>(
     selectedList ? `/api/admin/todo/tags?listId=${selectedList._id}` : null,
     dataFetcher,
@@ -161,14 +171,9 @@ export default function TodoApp({
     }
   }, [lists, isLoading, initialListId, initialProjectId]);
   useEffect(() => {
-    const menu = () => setMobileOpen((current) => !current),
-      search = (e: Event) => setQuery((e as CustomEvent<string>).detail);
+    const menu = () => setMobileOpen((current) => !current);
     window.addEventListener("ervisio:menu", menu);
-    window.addEventListener("ervisio:search", search);
-    return () => {
-      window.removeEventListener("ervisio:menu", menu);
-      window.removeEventListener("ervisio:search", search);
-    };
+    return () => window.removeEventListener("ervisio:menu", menu);
   }, []);
   useEffect(() => {
     if (!mobileOpen) return;
@@ -232,8 +237,9 @@ export default function TodoApp({
     if (list.projectId)
       setExpanded((current) => new Set([...current, list.projectId!]));
   }
-  function newList() {
+  function newList(projectId = selectedProjectId ?? null) {
     setEditingList(null);
+    setListProjectId(projectId);
     setListModal(true);
   }
   function newTask(listId: string, parent: string | null = null) {
@@ -334,7 +340,7 @@ export default function TodoApp({
     event: React.MouseEvent<HTMLElement> | React.FocusEvent<HTMLElement>,
     text: string,
   ) {
-    if (!preferences.sidebarCollapsed || mobileOpen) return;
+    if (!collapsed) return;
     const box = event.currentTarget.getBoundingClientRect();
     setTooltip({ text, x: box.right + 12, y: box.top + 8 });
   }
@@ -362,6 +368,100 @@ export default function TodoApp({
       </button>
     );
   }
+  function listPanel(
+    open: boolean,
+    projectId: string | null,
+    items: TodoListPlain[],
+  ) {
+    return (
+      <div className="project-panel" data-open={open} inert={!open}>
+        <div className="project-panel-inner">
+          <div className="project-lists">
+            {items.map((list) => (
+              <button
+                key={list._id}
+                className={`sidebar-list${list._id === selectedListId ? " active" : ""}`}
+                aria-label={list.title}
+                aria-current={list._id === selectedListId ? "page" : undefined}
+                onClick={() => selectList(list)}
+                onMouseEnter={(e) => tip(e, list.title)}
+                onMouseLeave={() => setTooltip(null)}
+                onFocus={(e) => tip(e, list.title)}
+                onBlur={() => setTooltip(null)}
+              >
+                <ListIcon list={list} />
+                <span className="nav-label">{list.title}</span>
+              </button>
+            ))}
+            <button
+              className="sidebar-list new-list"
+              aria-label={t("Nuova lista")}
+              onClick={() => newList(projectId)}
+              onMouseEnter={(e) => tip(e, t("Nuova lista"))}
+              onMouseLeave={() => setTooltip(null)}
+              onFocus={(e) => tip(e, t("Nuova lista"))}
+              onBlur={() => setTooltip(null)}
+            >
+              <Icon icon={faPlus} />
+              <span className="nav-label">{t("Nuova lista")}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  const listActions = preferences.view === "list" && !!selectedList,
+    menuGroups: MenuGroup[] = [];
+  if (listActions && selectedList)
+    menuGroups.push({
+      label: `${t("Lista")}: ${selectedList.title}`,
+      items: [
+        { label: t("Tag"), icon: faTag, onSelect: () => setTagModal(true) },
+        ...(canManage(selectedList)
+          ? [
+              {
+                label: t("Svuota lista"),
+                icon: faBroom,
+                onSelect: () => setClearList(selectedList),
+              },
+              {
+                label: t("Modifica lista"),
+                icon: faPen,
+                onSelect: () => {
+                  setEditingList(selectedList);
+                  setListModal(true);
+                },
+              },
+              {
+                label: t("Elimina lista"),
+                icon: faTrash,
+                danger: true,
+                onSelect: () => setDeleteList(selectedList),
+              },
+            ]
+          : []),
+      ],
+    });
+  if (isProjectOwner && selectedProject)
+    menuGroups.push({
+      label: `${t("Progetto")}: ${selectedProject.title}`,
+      items: [
+        {
+          label: t("Progetto"),
+          icon: faGear,
+          onSelect: () => {
+            setEditingProject(selectedProject);
+            setProjectModal(true);
+          },
+        },
+        {
+          label: t("Elimina progetto"),
+          icon: faTrash,
+          danger: true,
+          onSelect: () => setDeleteProject(selectedProject),
+        },
+      ],
+    });
   const pane = (list: TodoListPlain) => (
     <ListTaskPane
       list={list}
@@ -371,11 +471,12 @@ export default function TodoApp({
       onNew={newTask}
       onEdit={editTask}
       onSelect={setSelectedTaskId}
+      selectedId={selectedTaskId}
     />
   );
   return (
     <div
-      className={`todo-shell${preferences.sidebarCollapsed ? " sidebar-collapsed" : ""}${mobileOpen ? " menu-open" : ""}`}
+      className={`todo-shell${collapsed ? " sidebar-collapsed" : ""}${mobileOpen ? " menu-open" : ""}`}
     >
       {mobileOpen && (
         <button
@@ -400,7 +501,7 @@ export default function TodoApp({
                   ? "Espandi barra laterale"
                   : "Riduci barra laterale",
             )}
-            aria-expanded={!preferences.sidebarCollapsed}
+            aria-expanded={!collapsed}
             onClick={() => {
               if (mobileOpen) setMobileOpen(false);
               else
@@ -412,37 +513,45 @@ export default function TodoApp({
             <Icon icon={faBars} />
           </button>
         </div>
-        <button
-          className="button sidebar-create"
+        <label
+          className="sidebar-search"
           onClick={() => {
-            setEditingProject(null);
-            setProjectModal(true);
+            if (!collapsed) return;
+            setPreference({ sidebarCollapsed: false });
+            requestAnimationFrame(() => searchRef.current?.focus());
           }}
-          aria-label={t("Nuovo progetto")}
         >
-          <Icon icon={faPlus} />
-          <span className="nav-label">{t("Nuovo progetto")}</span>
-        </button>
-        <p className="sidebar-label">{t("Navigazione")}</p>
-        {nav(
-          t("Panoramica"),
-          faHouse,
-          () => {
-            setSelectedProjectId(undefined);
-            setSelectedListId(lists[0]?._id || null);
-            setSelectedTaskId(null);
-          },
-          selectedProjectId === undefined,
-        )}
-        {nav(
-          t("Preferiti"),
-          faStar,
-          () => setTab("favorites"),
-          tab === "favorites",
-        )}
+          <Icon icon={faMagnifyingGlass} />
+          <input
+            ref={searchRef}
+            type="search"
+            aria-label={t("Cerca nelle attività")}
+            placeholder={t("Cerca nelle attività")}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
+        <div className="sidebar-group">
+          {nav(
+            t("Panoramica"),
+            faHouse,
+            () => {
+              setSelectedProjectId(undefined);
+              setSelectedListId(lists[0]?._id || null);
+              setSelectedTaskId(null);
+            },
+            selectedProjectId === undefined,
+          )}
+          {nav(
+            t("Preferiti"),
+            faStar,
+            () => setTab("favorites"),
+            tab === "favorites",
+          )}
+        </div>
         <div className="sidebar-label-row">
           <p className="sidebar-label">{t("Progetti")}</p>
           <button
+            className="icon-button"
             aria-label={t("Nuovo progetto")}
             onClick={() => {
               setEditingProject(null);
@@ -453,103 +562,73 @@ export default function TodoApp({
           </button>
         </div>
         <nav className="project-tree">
-          {projects.map((project) => (
-            <div className="project-branch" key={project._id}>
-              <div
-                className={`project-node${selectedProjectId === project._id ? " selected" : ""}`}
-              >
-                <button
-                  className="project-select"
-                  aria-label={project.title}
-                  onClick={() => selectProject(project)}
-                  onMouseEnter={(e) => tip(e, project.title)}
-                  onMouseLeave={() => setTooltip(null)}
-                  onFocus={(e) => tip(e, project.title)}
-                  onBlur={() => setTooltip(null)}
+          {projects.map((project) => {
+            const open = expanded.has(project._id);
+            return (
+              <div className="project-branch" key={project._id}>
+                <div
+                  className={`project-node${selectedProjectId === project._id ? " selected" : ""}`}
                 >
-                  <span
-                    className="project-custom-icon"
-                    style={{ color: project.color }}
+                  <button
+                    className="project-select"
+                    aria-label={project.title}
+                    onClick={() => selectProject(project)}
+                    onMouseEnter={(e) => tip(e, project.title)}
+                    onMouseLeave={() => setTooltip(null)}
+                    onFocus={(e) => tip(e, project.title)}
+                    onBlur={() => setTooltip(null)}
                   >
-                    <ListIcon
-                      list={{
-                        iconType: project.iconValue.startsWith("fa-")
-                          ? "fontawesome"
-                          : "emoji",
-                        iconValue: project.iconValue,
-                      }}
-                    />
-                  </span>
-                  <span className="nav-label">{project.title}</span>
-                </button>
-                <button
-                  className="project-expand"
-                  aria-label={`${t(expanded.has(project._id) ? "Riduci" : "Espandi")} ${project.title}`}
-                  aria-expanded={expanded.has(project._id)}
-                  onClick={() =>
-                    setExpanded((current) => {
-                      const next = new Set(current);
-                      next.has(project._id)
-                        ? next.delete(project._id)
-                        : next.add(project._id);
-                      return next;
-                    })
-                  }
-                >
-                  <Icon
-                    icon={
-                      expanded.has(project._id) ? faChevronDown : faChevronRight
+                    <span
+                      className="project-custom-icon"
+                      style={{ color: project.color }}
+                    >
+                      <ListIcon
+                        list={{
+                          iconType: project.iconValue.startsWith("fa-")
+                            ? "fontawesome"
+                            : "emoji",
+                          iconValue: project.iconValue,
+                        }}
+                      />
+                    </span>
+                    <span className="nav-label">{project.title}</span>
+                  </button>
+                  <button
+                    className="project-expand"
+                    aria-label={`${t(open ? "Riduci" : "Espandi")} ${project.title}`}
+                    aria-expanded={open}
+                    onClick={() =>
+                      setExpanded((current) => {
+                        const next = new Set(current);
+                        next.has(project._id)
+                          ? next.delete(project._id)
+                          : next.add(project._id);
+                        return next;
+                      })
                     }
-                  />
-                </button>
-              </div>
-              {expanded.has(project._id) && (
-                <div className="project-lists">
-                  {lists
-                    .filter((list) => list.projectId === project._id)
-                    .map((list) => (
-                      <button
-                        key={list._id}
-                        className={`sidebar-list${list._id === selectedListId ? " active" : ""}`}
-                        aria-current={
-                          list._id === selectedListId ? "page" : undefined
-                        }
-                        onClick={() => selectList(list)}
-                      >
-                        <ListIcon list={list} />
-                        <span>{list.title}</span>
-                      </button>
-                    ))}
+                  >
+                    <Icon icon={faChevronDown} />
+                  </button>
                 </div>
-              )}
-            </div>
-          ))}
+                {listPanel(
+                  open,
+                  project._id,
+                  lists.filter((list) => list.projectId === project._id),
+                )}
+              </div>
+            );
+          })}
         </nav>
         {nav(
           t("Senza progetto"),
           faLayerGroup,
           () => selectProject(null),
-          selectedProjectId === null &&
-            (!selectedListId || preferences.sidebarCollapsed),
+          selectedProjectId === null && (!selectedListId || collapsed),
         )}
-        {selectedProjectId === null && (
-          <div className="project-lists">
-            {lists
-              .filter((list) => !list.projectId)
-              .map((list) => (
-                <button
-                  key={list._id}
-                  className={`sidebar-list${list._id === selectedListId ? " active" : ""}`}
-                  aria-current={
-                    list._id === selectedListId ? "page" : undefined
-                  }
-                  onClick={() => selectList(list)}
-                >
-                  <ListIcon list={list} />
-                  <span>{list.title}</span>
-                </button>
-              ))}
-          </div>
+        {listPanel(
+          selectedProjectId === null,
+          null,
+          lists.filter((list) => !list.projectId),
         )}
         <footer className="sidebar-footer">
           {nav(t("Impostazioni"), faGear, () => location.assign("/settings"))}
@@ -577,76 +656,39 @@ export default function TodoApp({
         className={`todo-content${preferences.view === "cards" ? " cards-mode" : ""}`}
       >
         <div className="workspace-heading">
-          <div className="workspace-breadcrumb">
-            <button onClick={() => setSelectedProjectId(undefined)}>
-              {t("Progetti")}
-            </button>
-            {selectedProject && (
-              <>
-                <span>/</span>
-                <span>{selectedProject.title}</span>
-              </>
-            )}
-          </div>
-          <div className="workspace-title-row">
+          <div className="workspace-title">
             <h1>
               {selectedProject?.title ||
                 (selectedList ? selectedList.title : t("Il tuo spazio"))}
             </h1>
-            <div className="workspace-main-actions">
-              {isProjectOwner && (
-                <>
-                  <button
-                    className="button secondary"
-                    onClick={() => {
-                      setEditingProject(selectedProject);
-                      setProjectModal(true);
-                    }}
-                  >
-                    <Icon icon={faGear} />
-                    <span>{t("Progetto")}</span>
-                  </button>
-                  <button
-                    className="icon-button danger-icon"
-                    title={t("Elimina progetto")}
-                    aria-label={t("Elimina progetto")}
-                    onClick={() => setDeleteProject(selectedProject)}
-                  >
-                    <Icon icon={faTrash} />
-                  </button>
-                </>
-              )}
-              <button className="button" onClick={newList}>
-                <Icon icon={faPlus} />
-                {t("Nuova lista")}
-              </button>
-            </div>
-          </div>
-          <div className="workspace-view-row">
             <p>
               {selectedProject?.description ||
                 `${contextLists.length} ${t("Liste").toLowerCase()}`}
             </p>
-            <div
-              className="segmented view-selector"
-              role="group"
-              aria-label={t("Vista del progetto")}
-            >
+          </div>
+          <div className="workspace-main-actions">
+            {listActions && selectedList && canManage(selectedList) && (
               <button
-                aria-pressed={preferences.view === "list"}
-                onClick={() => setPreference({ view: "list" })}
+                className="icon-button"
+                title={t("Link pubblico")}
+                aria-label={t("Link pubblico")}
+                onClick={() => setShareListId(selectedList._id)}
               >
-                <Icon icon={faList} />
-                {t("Lista")}
+                <Icon icon={faShareNodes} />
               </button>
+            )}
+            {menuGroups.length > 0 && (
+              <OverflowMenu label={t("Altre azioni")} groups={menuGroups} />
+            )}
+            {listActions && selectedList && (
               <button
-                aria-pressed={preferences.view === "cards"}
-                onClick={() => setPreference({ view: "cards" })}
+                className="button"
+                onClick={() => newTask(selectedList._id)}
               >
-                <Icon icon={faTableColumns} />
-                {t("Schede")}
+                <Icon icon={faPlus} />
+                {t("Nuova task")}
               </button>
-            </div>
+            )}
           </div>
         </div>
         {error && (
@@ -673,7 +715,7 @@ export default function TodoApp({
                   : "Crea un progetto e raccogli al suo interno tutte le liste di attività.",
               )}
             </p>
-            <button className="button" onClick={newList}>
+            <button className="button" onClick={() => newList()}>
               <Icon icon={faPlus} />
               {t("Nuova lista")}
             </button>
@@ -695,83 +737,50 @@ export default function TodoApp({
               ))}
             </nav>
             <div className="task-toolbar">
-              <div className="task-tabs">
-                {(["active", "favorites", "completed"] as const).map(
-                  (status) => (
-                    <button
-                      key={status}
-                      aria-pressed={tab === status}
-                      onClick={() => setTab(status)}
-                    >
-                      {t(
-                        status === "active"
-                          ? "Attive"
-                          : status === "favorites"
-                            ? "Preferite"
-                            : "Completate",
-                      )}
-                    </button>
-                  ),
-                )}
-              </div>
-              {preferences.view === "list" && selectedList && (
-                <div className="list-actions">
-                  <button
-                    className="button compact"
-                    onClick={() => newTask(selectedList._id)}
-                  >
-                    <Icon icon={faPlus} />
-                    {t("Nuova task")}
-                  </button>
-                  <button
-                    className="icon-button"
-                    title={t("Tag")}
-                    aria-label={t("Tag")}
-                    onClick={() => setTagModal(true)}
-                  >
-                    <Icon icon={faTag} />
-                  </button>
-                  {canManage(selectedList) && (
-                    <>
+              <div className="workspace-view-row">
+                <div className="task-tabs">
+                  {(["active", "favorites", "completed"] as const).map(
+                    (status) => (
                       <button
-                        className="icon-button"
-                        title={t("Link pubblico")}
-                        aria-label={t("Link pubblico")}
-                        onClick={() => setShareListId(selectedList._id)}
+                        key={status}
+                        aria-pressed={tab === status}
+                        onClick={() => setTab(status)}
                       >
-                        <Icon icon={faShareNodes} />
+                        {t(
+                          status === "active"
+                            ? "Attive"
+                            : status === "favorites"
+                              ? "Preferite"
+                              : "Completate",
+                        )}
+                        {status === "active" && activeTasks && (
+                          <small>{activeTasks.length}</small>
+                        )}
                       </button>
-                      <button
-                        className="icon-button"
-                        title={t("Svuota lista")}
-                        aria-label={t("Svuota lista")}
-                        onClick={() => setClearList(selectedList)}
-                      >
-                        <Icon icon={faBroom} />
-                      </button>
-                      <button
-                        className="icon-button"
-                        title={t("Modifica lista")}
-                        aria-label={t("Modifica lista")}
-                        onClick={() => {
-                          setEditingList(selectedList);
-                          setListModal(true);
-                        }}
-                      >
-                        <Icon icon={faPen} />
-                      </button>
-                      <button
-                        className="icon-button danger-icon"
-                        title={t("Elimina lista")}
-                        aria-label={t("Elimina lista")}
-                        onClick={() => setDeleteList(selectedList)}
-                      >
-                        <Icon icon={faTrash} />
-                      </button>
-                    </>
+                    ),
                   )}
                 </div>
-              )}
+                <div
+                  className="segmented view-selector"
+                  role="group"
+                  aria-label={t("Vista del progetto")}
+                >
+                  <button
+                    aria-pressed={preferences.view === "list"}
+                    onClick={() => setPreference({ view: "list" })}
+                  >
+                    <Icon icon={faList} />
+                    {t("Lista")}
+                  </button>
+                  <button
+                    aria-pressed={preferences.view === "cards"}
+                    onClick={() => setPreference({ view: "cards" })}
+                  >
+                    <Icon icon={faTableColumns} />
+                    {t("Schede")}
+                  </button>
+                </div>
+              </div>
             </div>
             {preferences.view === "list" && selectedList && tags.length > 0 && (
               <div className="tag-filter">
@@ -859,16 +868,16 @@ export default function TodoApp({
                 </div>
               )}
               {selectedTaskId && (
-                <div className="task-detail-dock">
-                  <TaskDetailPanel
-                    taskId={selectedTaskId}
-                    onClose={() => setSelectedTaskId(null)}
-                    onEdit={(task) => {
-                      setSelectedTaskId(null);
-                      editTask(task);
-                    }}
-                  />
-                </div>
+                <TaskDetailPanel
+                  taskId={selectedTaskId}
+                  onClose={() => setSelectedTaskId(null)}
+                  onEdit={(task) => {
+                    setSelectedTaskId(null);
+                    editTask(task);
+                  }}
+                  onAddSubtask={(task) => newTask(task.listId, task._id)}
+                  onOpenTask={setSelectedTaskId}
+                />
               )}
             </div>
           </>
@@ -881,7 +890,7 @@ export default function TodoApp({
         size="md"
       >
         <TodoListForm
-          initial={editingList || { projectId: selectedProjectId || null }}
+          initial={editingList || { projectId: listProjectId }}
           onSubmit={saveList}
           onCancel={() => setListModal(false)}
         />

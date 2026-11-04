@@ -1,10 +1,11 @@
 "use client";
 
 import { useCapabilities } from "@/hooks/useCapabilities";
-import { apiFetch as fetch } from "@/lib/client";
+import { apiFetch as fetch, dataFetcher } from "@/lib/client";
+import { usePreferences } from "@/components/Preferences";
 
 import { useState, useEffect } from "react";
-import useSWR, { useSWRConfig } from "swr";
+import useSWR from "swr";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
@@ -12,27 +13,18 @@ import { AdminModal } from "@/components/admin/AdminModal";
 import { Icon } from "@/components/ui/Icon";
 import {
   faXmark,
+  faTrash,
   faPen,
-  faClock,
-  faExclamationTriangle,
-  faUser,
+  faCheck,
+  faPlus,
   faPaperclip,
-  faCircleCheck,
-  faList,
+  faRotateLeft,
+  faStar,
   faWandMagicSparkles,
-  faTag,
 } from "@fortawesome/free-solid-svg-icons";
-import type { TodoTaskPlain, TodoTagPlain } from "@/types/todo";
-
-const fetcher = (url: string) =>
-  fetch(url)
-    .then((r) => r.json())
-    .then((r) => r.data ?? null);
-
-const arrayFetcher = (url: string) =>
-  fetch(url)
-    .then((r) => r.json())
-    .then((r) => r.data ?? []);
+import { faStar as faStarOutline } from "@fortawesome/free-regular-svg-icons";
+import type { TodoListPlain, TodoTaskPlain, TodoTagPlain } from "@/types/todo";
+import { useSubtasks, useTaskActions } from "./taskActions";
 
 function formatDate(
   iso: string | null | undefined,
@@ -51,54 +43,191 @@ function formatDate(
   );
 }
 
+const shortDate: Intl.DateTimeFormatOptions = {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+};
+
 function isOverdue(iso: string | null | undefined): boolean {
   if (!iso) return false;
   return new Date(iso) < new Date();
 }
 
-interface Props {
-  taskId: string | null;
-  onClose: () => void;
-  onEdit: (task: TodoTaskPlain) => void;
+function displayUser(
+  u: { username?: string; name?: string; email?: string; _id?: string },
+  fallback = "Utente",
+) {
+  return u.username ?? u.name ?? u.email ?? u._id ?? fallback;
 }
 
-export function TaskDetailPanel({ taskId, onClose, onEdit }: Props) {
-  const { aiEnabled } = useCapabilities();
+function SubtaskRow({
+  task,
+  parentTitle,
+  depth,
+  onOpen,
+}: {
+  task: TodoTaskPlain;
+  parentTitle?: string;
+  depth: number;
+  onOpen: (id: string) => void;
+}) {
+  const { t } = usePreferences(),
+    { complete, reopen, revalidate } = useTaskActions(),
+    nested = useSubtasks(task.listId, task._id, (task.childCount ?? 0) > 0),
+    [busy, setBusy] = useState(false);
+  async function toggle() {
+    setBusy(true);
+    try {
+      if (task.isCompleted ? await reopen(task._id) : await complete(task._id))
+        await revalidate();
+    } catch {
+      /* apiFetch already displays the connection error. */
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <>
+      <div
+        className="subtask-row"
+        data-subtask={task._id}
+        style={{ marginLeft: depth * 24 }}
+      >
+        <button
+          type="button"
+          className="check-task"
+          aria-pressed={task.isCompleted}
+          aria-label={`${t(task.isCompleted ? "Riapri" : "Completa")}: ${task.title}`}
+          disabled={busy}
+          onClick={toggle}
+        >
+          <span>{task.isCompleted && <Icon icon={faCheck} />}</span>
+        </button>
+        <div className="task-copy">
+          <button
+            type="button"
+            className={`task-title${task.isCompleted ? " done" : ""}`}
+            onClick={() => onOpen(task._id)}
+          >
+            {task.title}
+          </button>
+          {parentTitle && (
+            <span className="parent-note">
+              {t("In")} {parentTitle}
+            </span>
+          )}
+        </div>
+      </div>
+      {[...(nested.open ?? []), ...(nested.done ?? [])].map((child) => (
+        <SubtaskRow
+          key={child._id}
+          task={child}
+          parentTitle={task.title}
+          depth={depth + 1}
+          onOpen={onOpen}
+        />
+      ))}
+    </>
+  );
+}
+
+interface Props {
+  taskId: string;
+  onClose: () => void;
+  onEdit: (task: TodoTaskPlain) => void;
+  onAddSubtask: (task: TodoTaskPlain) => void;
+  onOpenTask: (taskId: string) => void;
+}
+
+export function TaskDetailPanel({
+  taskId,
+  onClose,
+  onEdit,
+  onAddSubtask,
+  onOpenTask,
+}: Props) {
+  const { aiEnabled } = useCapabilities(),
+    { t } = usePreferences(),
+    { complete, reopen, remove, removeFromLists, revalidate } =
+      useTaskActions();
   const [isRefactoring, setIsRefactoring] = useState(false);
   const [showRefactorModal, setShowRefactorModal] = useState(false);
   const [generateSubtasks, setGenerateSubtasks] = useState(false);
   const [includeSubtasks, setIncludeSubtasks] = useState(false);
   const [errorStr, setErrorStr] = useState<string | null>(null);
-
-  const { mutate: globalMutate } = useSWRConfig();
+  const [toggling, setToggling] = useState(false);
 
   const { data: task, isLoading } = useSWR<TodoTaskPlain>(
-    taskId ? `/api/admin/todo/tasks/${taskId}` : null,
-    fetcher,
+    `/api/admin/todo/tasks/${taskId}`,
+    dataFetcher,
     { revalidateOnFocus: true, refreshInterval: 30_000 },
   );
-
-  // Fetch tags for the task's list to render tag badges
+  const { data: parent } = useSWR<TodoTaskPlain>(
+    task?.parentTaskId ? `/api/admin/todo/tasks/${task.parentTaskId}` : null,
+    dataFetcher,
+  );
+  const { data: lists } = useSWR<TodoListPlain[]>(
+    "/api/admin/todo/lists",
+    dataFetcher,
+  );
   const { data: listTags } = useSWR<TodoTagPlain[]>(
     task?.listId ? `/api/admin/todo/tags?listId=${task.listId}` : null,
-    arrayFetcher,
+    dataFetcher,
     { revalidateOnFocus: false },
   );
+  const subtasks = useSubtasks(task?.listId ?? "", taskId, !!task);
 
   const tagMap: Record<string, TodoTagPlain> = {};
-  if (listTags) {
-    for (const t of listTags) tagMap[t._id] = t;
-  }
+  for (const tag of listTags ?? []) tagMap[tag._id] = tag;
+  const list = lists?.find((l) => l._id === task?.listId),
+    overdue = !!task && !task.isCompleted && isOverdue(task.dueDate),
+    done = subtasks.done?.length ?? 0;
 
-  const visible = !!taskId;
   useEffect(() => {
-    if (!visible) return;
     const close = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);
-  }, [visible, onClose]);
+  }, [onClose]);
+
+  async function toggleFavorite() {
+    try {
+      await fetch(`/api/admin/todo/tasks/${taskId}/favorite`, {
+        method: "PATCH",
+      });
+      await revalidate();
+    } catch {
+      /* apiFetch already displays the connection error. */
+    }
+  }
+
+  async function toggleCompleted() {
+    if (!task) return;
+    setToggling(true);
+    try {
+      if (task.isCompleted) {
+        if (await reopen(task._id)) await revalidate();
+      } else if (await complete(task._id)) {
+        removeFromLists(task._id);
+        await revalidate();
+      }
+    } catch {
+      /* apiFetch already displays the connection error. */
+    } finally {
+      setToggling(false);
+    }
+  }
+
+  async function deleteTask() {
+    if (!task) return;
+    try {
+      if (await remove(task)) onClose();
+    } catch {
+      /* apiFetch already displays the connection error. */
+    }
+  }
 
   function promptRefactorAI() {
     if (!task) return;
@@ -127,12 +256,7 @@ export function TaskDetailPanel({ taskId, onClose, onEdit }: Props) {
         const d = await res.json().catch(() => ({}));
         throw new Error(d.error || "Refactor failed");
       }
-      globalMutate(
-        (key: unknown) =>
-          typeof key === "string" && key.startsWith("/api/admin/todo/tasks"),
-        undefined,
-        { revalidate: true },
-      );
+      revalidate();
       setShowRefactorModal(false);
     } catch (err: any) {
       setErrorStr("Errore durante il refactor AI: " + err.message);
@@ -143,317 +267,239 @@ export function TaskDetailPanel({ taskId, onClose, onEdit }: Props) {
 
   return (
     <>
-      {/* Backdrop */}
-      {visible && (
-        <div
-          className="task-panel-backdrop fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
-          onClick={onClose}
-        />
-      )}
-
-      {/* Sliding panel */}
       <div
-        aria-hidden={!visible}
-        inert={!visible}
         role="dialog"
         aria-label="Dettaglio attività"
-        className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l border-white/[0.04] bg-[var(--surface)] shadow-2xl transition-transform duration-300 ${
-          visible ? "translate-x-0" : "translate-x-full"
-        }`}
+        className="task-detail"
       >
-        {/* Header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-white/[0.04] px-5 py-4">
-          <h3 className="text-xs font-semibold  text-ink-faint">
-            Dettaglio Task
-          </h3>
-          <div className="flex items-center gap-2">
+        <header>
+          <h3>{t("Dettaglio attività")}</h3>
+          <div>
+            {task && aiEnabled && (
+              <button
+                onClick={promptRefactorAI}
+                disabled={isRefactoring}
+                title="Refactor AI"
+                aria-label="Refactor AI"
+                className="icon-button"
+              >
+                <Icon
+                  icon={faWandMagicSparkles}
+                  className={isRefactoring ? "animate-pulse" : undefined}
+                />
+              </button>
+            )}
             {task && (
-              <>
-                <button
-                  hidden={!aiEnabled}
-                  onClick={promptRefactorAI}
-                  disabled={isRefactoring}
-                  title="Refactor AI"
-                  className={`flex items-center gap-1.5 rounded-lg bg-blue-500/10 px-3 py-1.5 text-xs font-medium text-blue-400 transition hover:bg-blue-500/20 ${isRefactoring ? "opacity-50 cursor-not-allowed" : ""}`}
-                >
-                  <Icon
-                    icon={faWandMagicSparkles}
-                    className={`text-[10px] ${isRefactoring ? "animate-pulse" : ""}`}
-                  />
-                  Refactor
-                </button>
-                <button
-                  onClick={() => onEdit(task)}
-                  className="flex items-center gap-1.5 rounded-lg bg-orange-500/10 px-3 py-1.5 text-xs font-medium text-orange-400 transition hover:bg-orange-500/20"
-                >
-                  <Icon icon={faPen} className="text-[10px]" />
-                  Modifica
-                </button>
-              </>
+              <button
+                onClick={deleteTask}
+                title={t("Elimina attività")}
+                aria-label={t("Elimina attività")}
+                className="icon-button danger-icon"
+              >
+                <Icon icon={faTrash} />
+              </button>
             )}
             <button
               onClick={onClose}
               aria-label="Chiudi"
-              className="rounded-lg p-1.5 text-ink-faint transition hover:bg-white/5 hover:text-white"
+              className="icon-button"
             >
               <Icon icon={faXmark} />
             </button>
           </div>
-        </div>
+        </header>
 
-        {/* Scrollable body */}
-        <div className="flex-1 space-y-6 overflow-y-auto p-5">
-          {isLoading && (
-            <div className="flex justify-center py-12">
-              <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-            </div>
+        <div className="detail-content">
+          {isLoading && <div className="task-loading" />}
+
+          {!isLoading && !task && (
+            <p className="detail-empty">{t("Attività non trovata.")}</p>
           )}
 
-          {!isLoading && !task && taskId && (
-            <p className="py-12 text-center text-sm text-ink-faint">
-              Task non trovata.
-            </p>
-          )}
-
-          {!isLoading && task && (
+          {task && (
             <>
-              {/* Title + status badge */}
-              <div className="flex items-start gap-3">
-                <h2 className="flex-1 text-lg font-semibold leading-snug text-white">
-                  {task.title}
-                </h2>
-                {task.isCompleted ? (
-                  <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400">
-                    <Icon icon={faCircleCheck} className="text-[10px]" />
-                    Completata
-                  </span>
-                ) : task.dueDate && isOverdue(task.dueDate) ? (
-                  <span className="flex shrink-0 items-center gap-1 rounded-full bg-rose-500/[0.06] px-2.5 py-1 text-xs font-medium text-rose-400">
-                    <Icon
-                      icon={faExclamationTriangle}
-                      className="text-[10px]"
-                    />
-                    Scaduta
-                  </span>
-                ) : (
-                  <span className="shrink-0 rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium text-ink-dim">
-                    Attiva
-                  </span>
-                )}
+              <div className="detail-status">
+                <span
+                  className={`status-dot${task.isCompleted ? " done" : overdue ? " overdue" : ""}`}
+                />
+                <span>
+                  {t(
+                    task.isCompleted
+                      ? "Completata"
+                      : overdue
+                        ? "Scaduta"
+                        : "Da completare",
+                  )}
+                </span>
+                <button
+                  className="icon-button favorite"
+                  aria-pressed={task.isFavorite}
+                  aria-label={t(
+                    task.isFavorite
+                      ? "Rimuovi dai preferiti"
+                      : "Aggiungi ai preferiti",
+                  )}
+                  onClick={toggleFavorite}
+                >
+                  <Icon icon={task.isFavorite ? faStar : faStarOutline} />
+                </button>
               </div>
+              <h2>{task.title}</h2>
 
-              {/* Meta grid */}
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="rounded-lg bg-white/5 p-3">
-                  <p className="mb-1 text-[10px]  text-ink-faint">Creata da</p>
-                  <p className="truncate font-medium text-white">
-                    {task.createdByUser
-                      ? (task.createdByUser.username ??
-                        task.createdByUser.name ??
-                        task.createdByUser.email ??
-                        "Utente")
-                      : task.createdBy
-                        ? "Utente"
-                        : "—"}
-                  </p>
-                </div>
-
-                <div className="rounded-lg bg-white/5 p-3">
-                  <p className="mb-1 text-[10px]  text-ink-faint">Creata il</p>
-                  <p className="font-medium text-white">
-                    {formatDate(task.createdAt, {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </p>
-                </div>
-
+              <dl className="detail-meta">
+                {list && (
+                  <div>
+                    <dt>{t("Lista")}</dt>
+                    <dd>{list.title}</dd>
+                  </div>
+                )}
+                {task.parentTaskId && parent && (
+                  <div>
+                    <dt>{t("Sottoattività di")}</dt>
+                    <dd>
+                      <button onClick={() => onOpenTask(parent._id)}>
+                        {parent.title}
+                      </button>
+                    </dd>
+                  </div>
+                )}
                 {task.dueDate && (
-                  <div
-                    className={`rounded-lg p-3 ${
-                      isOverdue(task.dueDate) && !task.isCompleted
-                        ? "bg-rose-500/[0.06]"
-                        : "bg-white/5"
-                    }`}
-                  >
-                    <p className="mb-1 text-[10px]  text-ink-faint">Scadenza</p>
-                    <p
-                      className={`flex items-center gap-1 font-medium ${
-                        isOverdue(task.dueDate) && !task.isCompleted
-                          ? "text-rose-400"
-                          : "text-white"
-                      }`}
-                    >
-                      <Icon
-                        icon={
-                          isOverdue(task.dueDate) && !task.isCompleted
-                            ? faExclamationTriangle
-                            : faClock
-                        }
-                        className="text-[10px]"
-                      />
-                      {formatDate(task.dueDate, {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
+                  <div>
+                    <dt>{t("Scadenza")}</dt>
+                    <dd className={overdue ? "overdue" : undefined}>
+                      {formatDate(task.dueDate, shortDate)}
+                    </dd>
+                  </div>
+                )}
+                {!!task.assignedToUsers?.length && (
+                  <div>
+                    <dt>{t("Assegnata a")}</dt>
+                    <dd>
+                      {task.assignedToUsers
+                        .map((u) => displayUser(u))
+                        .join(", ")}
+                    </dd>
+                  </div>
+                )}
+                {task.tags.length > 0 && (
+                  <div>
+                    <dt>{t("Tag")}</dt>
+                    <dd className="detail-tags">
+                      {task.tags.map((tagId) => {
+                        const tag = tagMap[tagId];
+                        return tag ? (
+                          <span key={tagId} className="tag">
+                            <i style={{ background: tag.color }} />
+                            {tag.name}
+                          </span>
+                        ) : null;
                       })}
-                    </p>
+                    </dd>
                   </div>
                 )}
-
-                <div className="rounded-lg bg-white/5 p-3">
-                  <p className="mb-1 text-[10px]  text-ink-faint">Aggiornata</p>
-                  <p className="font-medium text-white">
-                    {formatDate(task.updatedAt, {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </p>
+                <div>
+                  <dt>{t("Creata")}</dt>
+                  <dd>
+                    {formatDate(task.createdAt, shortDate)}
+                    {task.createdByUser &&
+                      ` · ${displayUser(task.createdByUser)}`}
+                  </dd>
                 </div>
-
+                <div>
+                  <dt>{t("Aggiornata")}</dt>
+                  <dd>{formatDate(task.updatedAt, shortDate)}</dd>
+                </div>
                 {task.isCompleted && task.completedAt && (
-                  <div className="col-span-2 rounded-lg bg-emerald-500/10 p-3">
-                    <p className="mb-1 text-[10px]  text-emerald-400/60">
-                      Completata il
-                    </p>
-                    <p className="font-medium text-emerald-400">
+                  <div>
+                    <dt>{t("Completata")}</dt>
+                    <dd>
                       {formatDate(task.completedAt)}
-                      {task.completedByUser && (
-                        <span className="ml-1 text-emerald-300/70">
-                          da{" "}
-                          {task.completedByUser.username ??
-                            task.completedByUser.name ??
-                            task.completedByUser.email ??
-                            "Utente"}
-                        </span>
-                      )}
-                    </p>
+                      {task.completedByUser &&
+                        ` · ${displayUser(task.completedByUser)}`}
+                    </dd>
                   </div>
                 )}
-              </div>
+              </dl>
 
-              {/* Assigned to */}
-              {task.assignedToUsers && task.assignedToUsers.length > 0 && (
-                <div>
-                  <p className="mb-2 text-xs font-medium  text-ink-faint">
-                    <Icon icon={faUser} className="mr-1.5 text-[10px]" />
-                    Assegnata a
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {task.assignedToUsers.map((u) => (
-                      <span
-                        key={u._id}
-                        className="rounded-full bg-orange-500/15 px-3 py-1 text-xs font-medium text-orange-300"
-                      >
-                        {u.username ?? u.name ?? u.email ?? u._id}
-                      </span>
-                    ))}
-                  </div>
+              <h3>{t("Descrizione")}</h3>
+              {task.description ? (
+                <div className="prose prose-sm max-w-none detail-description">
+                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                    {task.description}
+                  </ReactMarkdown>
                 </div>
+              ) : (
+                <p className="detail-empty">{t("Nessuna descrizione")}</p>
               )}
 
-              {/* Tags */}
-              {task.tags && task.tags.length > 0 && (
-                <div>
-                  <p className="mb-2 text-xs font-medium  text-ink-faint">
-                    <Icon icon={faTag} className="mr-1.5 text-[10px]" />
-                    Tag
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {task.tags.map((tagId) => {
-                      const tag = tagMap[tagId];
-                      if (!tag) return null;
-                      return (
-                        <span
-                          key={tagId}
-                          className="rounded-full px-3 py-1 text-xs font-medium"
-                          style={{
-                            backgroundColor: tag.color + "25",
-                            color: tag.color,
-                          }}
-                        >
-                          {tag.name}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Description */}
-              <div>
-                <p className="mb-2 text-xs font-medium  text-ink-faint">
-                  <Icon icon={faList} className="mr-1.5 text-[10px]" />
-                  Descrizione
-                </p>
-                {task.description ? (
-                  <div
-                    className="
-                      prose prose-invert prose-sm max-w-none rounded-lg
-                      bg-[var(--surface)] px-4 py-3
-                      prose-p:text-white/80 prose-li:text-white/80
-                      prose-headings:text-white
-                      prose-a:text-orange-400
-                      prose-code:rounded prose-code:bg-white/10 prose-code:px-1 prose-code:text-orange-300
-                      prose-blockquote:border-l-orange-500/40 prose-blockquote:text-ink-dim
-                      prose-strong:text-white
-                    "
-                  >
-                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-                      {task.description}
-                    </ReactMarkdown>
-                  </div>
-                ) : (
-                  <p className="rounded-lg bg-[var(--surface)] px-4 py-3 text-xs italic text-ink-faint">
-                    Nessuna descrizione
-                  </p>
+              <h3>
+                {t("Sottoattività")}
+                <span>
+                  {done}/{subtasks.total}
+                </span>
+              </h3>
+              <div className="detail-subtasks">
+                {[...(subtasks.open ?? []), ...(subtasks.done ?? [])].map(
+                  (child) => (
+                    <SubtaskRow
+                      key={child._id}
+                      task={child}
+                      depth={0}
+                      onOpen={onOpenTask}
+                    />
+                  ),
                 )}
               </div>
+              <button
+                className="add-subtask"
+                onClick={() => onAddSubtask(task)}
+              >
+                <Icon icon={faPlus} />
+                {t("Aggiungi sottoattività")}
+              </button>
 
-              {/* Attachments */}
-              {task.attachments && task.attachments.length > 0 && (
-                <div>
-                  <p className="mb-2 text-xs font-medium  text-ink-faint">
-                    <Icon icon={faPaperclip} className="mr-1.5 text-[10px]" />
-                    Allegati ({task.attachments.length})
-                  </p>
-                  <div className="space-y-2">
+              {task.attachments.length > 0 && (
+                <>
+                  <h3>
+                    {t("Allegati")}
+                    <span>{task.attachments.length}</span>
+                  </h3>
+                  <div className="detail-attachments">
                     {task.attachments.map((att, i) => (
                       <a
                         key={i}
                         href={att.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center gap-3 rounded-lg border border-white/[0.04] bg-[var(--surface)] px-3 py-2.5 text-sm text-ink-dim transition hover:border-orange-500/20 hover:text-white"
                       >
-                        <Icon
-                          icon={faPaperclip}
-                          className="shrink-0 text-ink-faint"
-                        />
-                        <span className="min-w-0 flex-1 truncate">
-                          {att.name}
-                        </span>
-                        <span className="shrink-0 text-[10px] uppercase text-ink-faint">
-                          {att.mimeType.split("/").pop()}
-                        </span>
+                        <Icon icon={faPaperclip} />
+                        <span>{att.name}</span>
+                        <small>{att.mimeType.split("/").pop()}</small>
                       </a>
                     ))}
                   </div>
-                </div>
-              )}
-
-              {/* Subtask count */}
-              {(task.childCount ?? 0) > 0 && (
-                <p className="rounded-lg bg-[var(--surface)] px-4 py-3 text-xs text-ink-dim">
-                  {task.childCount} sottotask collegat
-                  {(task.childCount ?? 0) === 1 ? "a" : "e"}
-                </p>
+                </>
               )}
             </>
           )}
         </div>
+
+        {task && (
+          <footer>
+            <button className="button secondary" onClick={() => onEdit(task)}>
+              <Icon icon={faPen} />
+              {t("Modifica")}
+            </button>
+            <button
+              className="button"
+              disabled={toggling}
+              onClick={toggleCompleted}
+            >
+              <Icon icon={task.isCompleted ? faRotateLeft : faCheck} />
+              {t(task.isCompleted ? "Riapri" : "Completa")}
+            </button>
+          </footer>
+        )}
       </div>
 
       <AdminModal

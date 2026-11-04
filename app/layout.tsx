@@ -17,7 +17,17 @@ import {
   type Preferences,
 } from "@/components/Preferences";
 import { Toasts } from "@/components/Toasts";
+import localFont from "next/font/local";
 import "./globals.css";
+const manrope = localFont({
+  src: [
+    { path: "./fonts/manrope-400.ttf", weight: "400" },
+    { path: "./fonts/manrope-500.ttf", weight: "500" },
+    { path: "./fonts/manrope-600.ttf", weight: "600" },
+  ],
+  variable: "--font-manrope",
+  display: "swap",
+});
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
   const brand = brandingFor((await headers()).get("host") || ""),
@@ -59,6 +69,7 @@ export default async function RootLayout({
   return (
     <html
       lang={locale}
+      className={manrope.variable}
       data-theme={
         theme === "system"
           ? undefined

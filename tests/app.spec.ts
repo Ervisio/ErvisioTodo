@@ -168,18 +168,22 @@ test("registration, login, complete task workflow, permissions, recovery and mob
   await expect(
     page.getByText("Preparare il rilascio standalone", { exact: true }),
   ).toBeVisible();
-  // Regression: adding a grandchild updates the already mounted branch immediately.
+  // The subtask summary opens the detail panel, where subtasks form a checklist.
   await page
-    .getByRole("button", { name: "Mostra sottoattività" })
-    .first()
+    .locator(`[data-task-row="${task._id}"]`)
+    .getByRole("button", { name: /sottoattività/ })
     .click();
+  const detail = page.getByRole("dialog", { name: "Dettaglio attività" });
   await expect(
-    page.getByText("Verificare Docker", { exact: true }),
+    detail.getByText("Verificare Docker", { exact: true }),
   ).toBeVisible();
-  const nestedRow = page.locator(`[data-task-row="${child._id}"]`);
-  await nestedRow.hover();
-  await nestedRow
-    .getByRole("button", { name: "Aggiungi sottotask", exact: true })
+  // Regression: adding a grandchild updates the open checklist immediately.
+  await detail.getByText("Verificare Docker", { exact: true }).click();
+  await expect(
+    detail.getByRole("heading", { name: "Verificare Docker", exact: true }),
+  ).toBeVisible();
+  await detail
+    .getByRole("button", { name: "Aggiungi sottoattività", exact: true })
     .click();
   const nestedDialog = page.getByRole("dialog", {
     name: "Nuova task",
@@ -194,7 +198,7 @@ test("registration, login, complete task workflow, permissions, recovery and mob
     .last()
     .click();
   await expect(
-    page.getByText("Controllare i volumi senza refresh", { exact: true }),
+    detail.getByText("Controllare i volumi senza refresh", { exact: true }),
   ).toBeVisible({ timeout: 5000 });
   await page.screenshot({
     path: "docs/screenshots/workspace-desktop.png",
@@ -911,12 +915,12 @@ test("themes stay consistent across lists, navigation and reload; custom themes 
   expect(await colors()).toMatchObject({
     sheet: "#ffffff",
     surface: "rgb(255, 255, 255)",
-    accent: "#b94406",
-    selected: "rgba(0, 0, 0, 0)",
+    accent: "#245ac2",
   });
+  expect((await colors()).selected).not.toBe("rgba(0, 0, 0, 0)");
   expect((await colors()).right).toBeLessThan(2);
   for (const [id, sheet] of [
-    ["dark", "#22272d"],
+    ["dark", "#202631"],
     ["amoled", "#000000"],
     ["tokyo-night", "#1a1b26"],
     ["github-dark", "#0d1117"],
@@ -1000,7 +1004,7 @@ test("themes stay consistent across lists, navigation and reload; custom themes 
     await page
       .getByRole("dialog")
       .evaluate((element) => getComputedStyle(element).backgroundColor),
-  ).toBe("rgb(13, 27, 42)");
+  ).toBe("rgb(7, 17, 31)");
   await page
     .getByRole("dialog")
     .getByRole("button", { name: "Chiudi", exact: true })

@@ -31,6 +31,7 @@ export function ListTaskPane({
   onNew,
   onEdit,
   onSelect,
+  selectedId,
 }: {
   list: TodoListPlain;
   tab: "active" | "favorites" | "completed";
@@ -39,6 +40,7 @@ export function ListTaskPane({
   onNew: (listId: string, parentId?: string | null) => void;
   onEdit: (task: TodoTaskPlain) => void;
   onSelect: (id: string) => void;
+  selectedId: string | null;
 }) {
   const { t } = usePreferences(),
     [ordered, setOrdered] = useState<TodoTaskPlain[] | null>(null),
@@ -111,8 +113,8 @@ export function ListTaskPane({
                 <TaskItem
                   key={task._id}
                   task={task}
+                  selected={task._id === selectedId}
                   onEdit={onEdit}
-                  onDeleted={() => mutate()}
                   onAddChild={(parent) => onNew(list._id, parent)}
                   onTaskClick={onSelect}
                   tagMap={map}

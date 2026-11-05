@@ -1,8 +1,8 @@
 {
   "name": "ervisio-todo",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "private": true,
-  "description": "ErvisioTodo \u2014 standalone task management extracted from FusionHub",
+  "description": "ErvisioTodo — standalone task management extracted from FusionHub",
   "engines": {
     "node": ">=24.13 <25"
   },
@@ -16,6 +16,8 @@
     "setup": "node scripts/setup.mjs",
     "backup": "node --env-file=.env scripts/backup.mjs",
     "docs:api": "node scripts/generate-openapi.mjs && prettier --write docs/openapi.json",
+    "plugin:commands": "node scripts/sync-plugin-commands.mjs && prettier --write plugin/plugin/manifest.json",
+    "plugin:commands:check": "node scripts/sync-plugin-commands.mjs --check",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test:docker": "node tests/docker-smoke.mjs"

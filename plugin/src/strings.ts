@@ -1,6 +1,49 @@
 /** UI strings of the plugin, registered with sdk.registerStrings(). Keys are short ids; {name} is a variable. */
 export const strings: Record<"en" | "it", Record<string, string>> = {
   en: {
+    "sec.deployment": "Deployment",
+    "dep.intro":
+      "Deployment values are stored on this machine in the installation .env. Saving validates the configuration and recreates the Docker container. This page also works when the app is stopped.",
+    "dep.group.address": "Public address and network",
+    "dep.group.auth": "Authentication defaults",
+    "dep.group.google": "Google OAuth",
+    "dep.group.discord": "Discord OAuth",
+    "dep.group.cognito": "AWS Cognito",
+    "dep.group.mail": "Email",
+    "dep.group.ai": "AI service",
+    "dep.group.limits": "Upload and storage defaults",
+    "dep.group.managed": "Managed infrastructure",
+    "dep.group.custom": "Additional environment variables",
+    "dep.urlHelp":
+      "The address people use to open ErvisioTodo. Update the reverse proxy and OAuth callback URLs to match.",
+    "dep.portHelp":
+      "Host port mapped to container port 3000 on 127.0.0.1. Update your reverse proxy if you change it.",
+    "dep.authHelp":
+      "These are environment defaults. Authentication choices saved in workspace settings take precedence; provider credentials must also be configured.",
+    "dep.managedHelp":
+      "Read-only values managed by the installer, Docker image or update process.",
+    "dep.customHelp":
+      "Add an uppercase environment key. Additional values are masked and never read back. An empty password field keeps the saved value; Clear removes it.",
+    "dep.variable": "Environment variable name",
+    "dep.add": "Add variable",
+    "dep.default": "Environment default",
+    "dep.unchanged": "Keep current value",
+    "dep.secretSet": "Configured. Leave blank to keep the saved value.",
+    "dep.secretEmpty": "Not configured. Enter a value to set it.",
+    "dep.cleared": "Will be cleared when you save.",
+    "dep.clear": "Clear",
+    "dep.loadFailed": "Could not read deployment configuration",
+    "dep.applyFailed": "Configuration saved; container recreation failed",
+    "dep.applied":
+      "Configuration saved and Docker container recreated. The app may take a moment to start.",
+    "dep.pending": "Configuration saved; application pending",
+    "dep.upToDate": "Deployment configuration is up to date",
+    "dep.restartHelp":
+      "Saving briefly interrupts the app while Docker recreates the container.",
+    "dep.retryApply": "Apply saved configuration",
+    "dep.save": "Save and recreate container",
+    "dep.applying": "Recreating container…",
+
     retry: "Retry",
     cancel: "Cancel",
     on: "On",
@@ -12,7 +55,7 @@ export const strings: Record<"en" | "it", Record<string, string>> = {
     "nav.maintenance": "Maintenance",
 
     "lead.settings":
-      "The workspace settings of ErvisioTodo. Changes apply as soon as you save them; no restart is needed.",
+      "Workspace policies apply immediately. Deployment configuration recreates the Docker container when saved.",
     "lead.maintenance":
       "Update ErvisioTodo and see where the installation keeps its files and data.",
 
@@ -157,7 +200,7 @@ export const strings: Record<"en" | "it", Record<string, string>> = {
 
     "auth.callback": "Callback",
     "auth.secretsNote":
-      "Provider secrets stay in the server environment (.env). After changing them, restart the app.",
+      "Configure provider credentials in the Deployment section. Saving there recreates the Docker container.",
 
     "mail.to": "Send a test email",
     "mail.testText":
@@ -294,6 +337,52 @@ export const strings: Record<"en" | "it", Record<string, string>> = {
     "w.open": "Open",
   },
   it: {
+    "sec.deployment": "Installazione",
+    "dep.intro":
+      "I valori sono salvati nel file .env dell’installazione su questa macchina. Il salvataggio verifica la configurazione e ricrea il container Docker. Questa pagina funziona anche con l’app ferma.",
+    "dep.group.address": "Indirizzo pubblico e rete",
+    "dep.group.auth": "Valori iniziali di autenticazione",
+    "dep.group.google": "Google OAuth",
+    "dep.group.discord": "Discord OAuth",
+    "dep.group.cognito": "AWS Cognito",
+    "dep.group.mail": "Email",
+    "dep.group.ai": "Servizio AI",
+    "dep.group.limits": "Valori iniziali per allegati e spazio",
+    "dep.group.managed": "Infrastruttura gestita",
+    "dep.group.custom": "Altre variabili d’ambiente",
+    "dep.urlHelp":
+      "L’indirizzo usato per aprire ErvisioTodo. Aggiorna il reverse proxy e gli indirizzi di callback OAuth di conseguenza.",
+    "dep.portHelp":
+      "Porta sull’host collegata alla porta 3000 del container su 127.0.0.1. Se la cambi, aggiorna il reverse proxy.",
+    "dep.authHelp":
+      "Questi sono i valori iniziali dell’ambiente. Le scelte salvate nelle impostazioni dello spazio di lavoro hanno precedenza; servono anche le credenziali dei provider.",
+    "dep.managedHelp":
+      "Valori in sola lettura gestiti dall’installer, dall’immagine Docker o dagli aggiornamenti.",
+    "dep.customHelp":
+      "Aggiungi una chiave in maiuscolo. I valori aggiuntivi sono mascherati e non vengono riletti. Lascia vuoto per mantenere il valore salvato; Svuota lo rimuove.",
+    "dep.variable": "Nome della variabile d’ambiente",
+    "dep.add": "Aggiungi variabile",
+    "dep.default": "Valore predefinito",
+    "dep.unchanged": "Mantieni il valore attuale",
+    "dep.secretSet":
+      "Configurato. Lascia vuoto per mantenere il valore salvato.",
+    "dep.secretEmpty": "Non configurato. Inserisci un valore per impostarlo.",
+    "dep.cleared": "Verrà svuotato al salvataggio.",
+    "dep.clear": "Svuota",
+    "dep.loadFailed":
+      "Impossibile leggere la configurazione dell’installazione",
+    "dep.applyFailed":
+      "Configurazione salvata; ricreazione del container non riuscita",
+    "dep.applied":
+      "Configurazione salvata e container Docker ricreato. L’app potrebbe impiegare qualche istante ad avviarsi.",
+    "dep.pending": "Configurazione salvata; applicazione in attesa",
+    "dep.upToDate": "Configurazione dell’installazione aggiornata",
+    "dep.restartHelp":
+      "Il salvataggio interrompe brevemente l’app mentre Docker ricrea il container.",
+    "dep.retryApply": "Applica la configurazione salvata",
+    "dep.save": "Salva e ricrea il container",
+    "dep.applying": "Ricreazione del container…",
+
     retry: "Riprova",
     cancel: "Annulla",
     on: "Attivo",
@@ -305,7 +394,7 @@ export const strings: Record<"en" | "it", Record<string, string>> = {
     "nav.maintenance": "Manutenzione",
 
     "lead.settings":
-      "Le impostazioni dello spazio di lavoro di ErvisioTodo. Le modifiche si applicano appena le salvi; non serve riavviare.",
+      "Le impostazioni dello spazio di lavoro si applicano subito. La configurazione dell’installazione ricrea il container Docker al salvataggio.",
     "lead.maintenance":
       "Aggiorna ErvisioTodo e vedi dove l’installazione tiene file e dati.",
 
@@ -450,13 +539,13 @@ export const strings: Record<"en" | "it", Record<string, string>> = {
 
     "auth.callback": "Callback",
     "auth.secretsNote":
-      "I segreti dei provider restano nell’ambiente del server (.env). Dopo averli cambiati, riavvia l’app.",
+      "Configura le credenziali dei provider nella sezione Installazione. Il salvataggio ricrea il container Docker.",
 
     "mail.to": "Invia un’email di prova",
     "mail.testText":
       "Manda un messaggio tramite il server SMTP impostato nell’installazione.",
     "mail.off":
-      "SMTP non è configurato. Imposta SMTP_URL nel file .env e riavvia l’app per inviare posta.",
+      "SMTP non è configurato. Imposta SMTP_URL nella sezione Installazione e salva per inviare posta.",
     "mail.send": "Invia",
     "mail.sent": "Email di prova inviata a {to}.",
 

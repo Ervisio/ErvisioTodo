@@ -45,6 +45,7 @@ import {
   type SectionId,
 } from "./fields";
 import { bytes, errText, t } from "./util";
+import { Deployment } from "./Deployment";
 
 export interface SettingsApi {
   doc: SettingsDoc | null;
@@ -453,6 +454,7 @@ export function Settings({
 }) {
   const s = useSettings();
   const [section, setSection] = useState<SectionId>("general");
+  const [deploymentVisited, setDeploymentVisited] = useState(false);
   const count = (id: SectionId) =>
     s ? s.dirty.filter((k) => FIELDS[k]?.section === id).length : 0;
   return (
@@ -466,7 +468,10 @@ export function Settings({
           variant="underline"
           aria-label={t("set.sections")}
           value={section}
-          onChange={(id) => setSection(id as SectionId)}
+          onChange={(id) => {
+            setSection(id as SectionId);
+            if (id === "deployment") setDeploymentVisited(true);
+          }}
           items={SECTIONS.map((id) => ({
             id,
             label: t(`sec.${id}`),
@@ -474,7 +479,12 @@ export function Settings({
           }))}
         />
       </div>
-      {!s?.doc ? (
+      {deploymentVisited && (
+        <div className="td-deployment-panel" hidden={section !== "deployment"}>
+          {children("deployment")}
+        </div>
+      )}
+      {section === "deployment" ? null : !s?.doc ? (
         s?.offline ? (
           <div className="td-err">
             <Icon name="power" />
@@ -524,11 +534,23 @@ const LIMIT_KEYS = [
 export function Section({
   id,
   status,
+  onApplied,
 }: {
   id: SectionId;
   status?: TodoStatus;
+  onApplied?: () => void;
 }) {
+  const settings = useSettings();
   switch (id) {
+    case "deployment":
+      return (
+        <Deployment
+          onApplied={() => {
+            settings?.reload();
+            onApplied?.();
+          }}
+        />
+      );
     case "general":
       return <General status={status} />;
     case "limits":

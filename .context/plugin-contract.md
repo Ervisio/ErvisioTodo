@@ -1,4 +1,4 @@
-# Plugin admin API contract (2026-11-04)
+# Plugin admin API contract
 
 Served on the unix socket `/run/ervisio-todo/api.sock` (mode 0660), consumed by `plugin/src/api/todo.ts`.
 Mirrors ErvisioRepo (`D:\Projects\ErvisioRepo\.context\plugin-contract.md`).
@@ -40,8 +40,33 @@ Body `{ to }`. Sends a test mail through SMTP_URL. 200 `{sent: true}`; 422 when 
 ## Done in the plugin, not the API
 
 Install (systemd-run unit `ervisio-todo-install`: download release v{version} to /opt/ervisio-todo, run
-`deploy/ervisio-setup.sh --url <url>` which writes .env with AUTH_SECRET/AUTH_URL/PLUGIN_SOCKET and `docker compose
-up -d`), start/stop/restart and logs via Docker API (compose project `ervisiotodo`, service `app`), update when
-`sdk.plugin.version` > `status.version` (unit `ervisio-todo-update`: back up data/.env, set ERVISIO_VERSION in .env,
-`docker compose pull app && up -d`). Server down with existing container → down banner, never the wizard.
-Docker only (no native package). Caddy: the stack's own `compose.caddy.yaml` or the host's; no Address page in v1.
+`deploy/ervisio-setup.sh --url <url>` which writes initial .env and starts Compose), start/stop/restart and logs via
+Docker API (compose project `ervisiotodo`, service `app`), update when `sdk.plugin.version` > `status.version`
+(unit `ervisio-todo-update`). Update first recovers existing custom runtime env from the live container, then writes
+ERVISIO_VERSION to persisted `.env` before pulling and starting. The existing app image supplies Node to the helper;
+the host needs no Node installation.
+
+## Docker deployment configuration
+
+The deployment page calls admin SDK commands `configuration-read`, `configuration-save`, and
+`configuration-apply` (`plugin/src/api/deployment.ts`). It never sends configuration values over HTTP or the Unix
+socket. Save stages a private JSON request through the SDK file API at
+`/opt/ervisio-todo/.plugin-config/requests/<id>.json`; the admin command consumes and removes it.
+
+On first read/update, one-time recovery copies live container environment values that differ from image defaults into
+`.env`, taking precedence over previous file values for those recovered keys. After the migration marker is written,
+persisted `.env` is authoritative. Protected runtime variables and PORT are excluded from recovery. Reads return
+non-secret values only; known secrets and every unknown key are masked and represented by configured status.
+
+Configuration operations share a non-blocking `flock` lock. Save checks the submitted SHA-256 revision, validates
+values, backs up `.env`, atomically replaces it, and restores the backup when `docker compose config` rejects the
+result. The page then applies by validating Compose, recreating the app, and waiting for health. Host PORT selects
+the published host port; the app always listens on container port 3000. Runtime/socket variables, ERVISIO_VERSION,
+and Compose/Docker/Buildx environment keys are read-only.
+
+`scripts/sync-plugin-commands.mjs` generates manifest command definitions from `deploy/plugin-config.mjs` and
+`deploy/plugin-update.sh`. Run `npm run plugin:commands` after editing those sources; plugin build runs `--check`
+and fails if the generated manifest is stale.
+
+Server down with existing container → down banner, never the wizard. Docker only (no native package). Caddy: the
+stack's own `compose.caddy.yaml` or the host's; no Address page in v1.

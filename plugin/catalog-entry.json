@@ -1,7 +1,7 @@
 {
   "id": "todo",
   "name": "ErvisioTodo",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Install and manage ErvisioTodo on this machine with Docker: workspace settings, mail test, live logs and updates.",
   "author": "Riccardo Reccia",
   "icon": "list",
@@ -26,9 +26,20 @@
       "install-log",
       "update-docker",
       "update-state",
-      "update-log"
+      "update-log",
+      "configuration-read",
+      "configuration-save",
+      "configuration-apply"
     ],
-    "http": ["todo", "docker"],
-    "sockets": ["/run/ervisio-todo/api.sock", "/var/run/docker.sock"]
+    "http": ["todo", "todo-user", "docker"],
+    "sockets": ["/run/ervisio-todo/api.sock", "/var/run/docker.sock"],
+    "files": {
+      "write": [
+        {
+          "path": "/opt/ervisio-todo/.plugin-config/requests",
+          "admin": true
+        }
+      ]
+    }
   }
 }

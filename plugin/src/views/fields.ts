@@ -6,8 +6,14 @@
 import type { SettingValue } from "../api/todo";
 import { t } from "./util";
 
-export type SectionId = "general" | "limits" | "auth" | "api";
-export const SECTIONS: SectionId[] = ["general", "limits", "auth", "api"];
+export type SectionId = "general" | "limits" | "auth" | "api" | "deployment";
+export const SECTIONS: SectionId[] = [
+  "general",
+  "limits",
+  "auth",
+  "api",
+  "deployment",
+];
 
 export type Field =
   /** Free text, 1 to `max` characters. */

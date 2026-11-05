@@ -206,9 +206,11 @@ export function TodoPage() {
       <SettingsProvider enabled={!!status}>
         <Shell srv={srv} tab={tab} mainRef={mainRef}>
           {tab === "overview" && <Overview srv={srv} />}
-          {tab === "settings" && (
-            <Settings>{(id) => <Section id={id} status={status} />}</Settings>
-          )}
+          <div className="td-settings-panel" hidden={tab !== "settings"}>
+            <Settings>
+              {(id) => <Section id={id} status={status} onApplied={reload} />}
+            </Settings>
+          </div>
           {tab === "maintenance" && <Maintenance srv={srv} />}
         </Shell>
       </SettingsProvider>

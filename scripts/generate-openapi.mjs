@@ -1223,7 +1223,7 @@ writeFileSync(
       openapi: "3.1.0",
       info: {
         title: "ErvisioTodo",
-        version: "0.3.1",
+        version: "0.3.2",
         description:
           "API con sessione HTTP-only e token Bearer personali. Auth.js /api/auth/* usa il proprio protocollo CSRF/OAuth ed è documentato dal progetto Auth.js. Nessuna API key pubblica. Vedi API.md per permessi e semantica.",
       },

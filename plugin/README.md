@@ -25,6 +25,11 @@ npm run build            # tsc, vite build, then copies plugin/ into dist/todo/
 
 ## Notes
 
+- Settings → Deployment manages the public URL, host port, domains, OAuth, SMTP, AI, limits and custom environment variables. Save writes `/opt/ervisio-todo/.env`, validates Compose and recreates the app; a failed restart can be retried without saving again. Workspace policies stored in SQLite still override their environment defaults.
+- On the first configuration read or update, custom values in the existing container are recovered into `.env`. Live values take precedence during this initial migration; subsequent changes use the persisted file. Image defaults and managed runtime variables are excluded. Missing values that were already lost in an earlier container update must be restored from a backup.
+- Secrets, including custom variable values, are never returned to the page. Leave their input blank to retain them or use Clear to remove a value. Environment files and backups are private; writes and updates share a lock, and stale drafts cannot overwrite a newer file.
+- `deploy/plugin-config.mjs` and `deploy/plugin-update.sh` are embedded into the manifest by `npm run plugin:commands` from the repository root. Run it after changing either source; plugin builds reject stale generated commands. The commands use Node from the installed Docker image and require `flock` on the host.
+
 - React APIs must never run at module top level: they are created lazily after `activate()` calls `setReact`.
 - `src/kit.ts` is adapted from Ervisio/plugin-caddy (MIT, see `LICENSE-plugin-caddy`).
 - `vite.config.ts` turns off PostCSS lookup so the app's Tailwind config in the parent folder is not applied.

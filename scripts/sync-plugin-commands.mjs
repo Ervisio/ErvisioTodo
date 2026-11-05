@@ -14,7 +14,7 @@ function inlineCommand(command, source, unit) {
   const capture = params.map((_, i) => `p${i}=$1; shift;`).join(" ");
   const forward = params.map((_, i) => `"$p${i}"`).join(" ");
   const launch = unit
-    ? `systemctl stop ${unit}.service 2>/dev/null || :; systemctl reset-failed ${unit}.service 2>/dev/null || :; exec systemd-run --unit=${unit} --remain-after-exit --setenv=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin sh -c "$script" ${command.name} ${forward}`
+    ? `systemctl stop ${unit}.service 2>/dev/null || :; systemctl reset-failed ${unit}.service 2>/dev/null || :; umask 077; d=/opt/ervisio-todo/.plugin-config; mkdir -p "$d"; chmod 700 "$d"; printf '%s\\n' "$script" > "$d/${command.name}.sh"; exec systemd-run --unit=${unit} --remain-after-exit --setenv=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin sh "$d/${command.name}.sh" ${forward}`
     : `exec sh -c "$script" ${command.name} ${forward}`;
   command.argv = [
     "sh",

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.3 - 2026-11-05
+
+- Fix Docker update and install scripts being altered by systemd environment expansion: execute private script files instead of passing shell source in ExecStart.
+- Preserve the existing AUTH_SECRET during configuration recovery and add regression coverage for the complete systemd command boundary.
+
 ## 0.3.2 - 2026-11-05
 
 - Preserve Docker environment customizations across updates by recovering existing container settings into the persistent .env file once.

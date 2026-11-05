@@ -22,3 +22,5 @@ Verification: `npm run typecheck`; `npm test`; `npm run build`; `npm run format:
 Related: map/storage.md, map/auth-api.md, plugin-contract.md.
 
 - Manifest commands embed static scripts as base64 chunks (<=1024 bytes per argv item, <=64 items); launcher decodes fixed code and forwards validated parameters. Re-run npm run plugin:commands after helper changes.
+
+- Never pass shell/JS source as systemd ExecStart arguments: systemd expands dollar variables and percent specifiers even within shell quotes. Install/update launchers write private 0600 scripts in .plugin-config (0700), then systemd runs sh with the script path and validated arguments only.

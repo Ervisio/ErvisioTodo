@@ -1,7 +1,7 @@
 {
   "id": "todo",
   "name": "ErvisioTodo",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Install, run and update ErvisioTodo on this machine with Docker: workspace settings, mail test, live logs and updates.",
   "author": "Riccardo Reccia",
   "icon": "list",
@@ -46,7 +46,7 @@
         "argv": [
           "sh",
           "-c",
-          "# ervisio-inline\nset -eu\np0=$1; shift; p1=$1; shift;\nscript=$(printf '%s' \"$@\" | base64 -d)\nsystemctl stop ervisio-todo-install.service 2>/dev/null || :; systemctl reset-failed ervisio-todo-install.service 2>/dev/null || :; exec systemd-run --unit=ervisio-todo-install --remain-after-exit --setenv=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin sh -c \"$script\" install-docker \"$p0\" \"$p1\"",
+          "# ervisio-inline\nset -eu\np0=$1; shift; p1=$1; shift;\nscript=$(printf '%s' \"$@\" | base64 -d)\nsystemctl stop ervisio-todo-install.service 2>/dev/null || :; systemctl reset-failed ervisio-todo-install.service 2>/dev/null || :; umask 077; d=/opt/ervisio-todo/.plugin-config; mkdir -p \"$d\"; chmod 700 \"$d\"; printf '%s\\n' \"$script\" > \"$d/install-docker.sh\"; exec systemd-run --unit=ervisio-todo-install --remain-after-exit --setenv=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin sh \"$d/install-docker.sh\" \"$p0\" \"$p1\"",
           "install-docker",
           "{0}",
           "{1}",
@@ -97,7 +97,7 @@
         "argv": [
           "sh",
           "-c",
-          "# ervisio-inline\nset -eu\np0=$1; shift;\nscript=$(printf '%s' \"$@\" | base64 -d)\nsystemctl stop ervisio-todo-update.service 2>/dev/null || :; systemctl reset-failed ervisio-todo-update.service 2>/dev/null || :; exec systemd-run --unit=ervisio-todo-update --remain-after-exit --setenv=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin sh -c \"$script\" update-docker \"$p0\"",
+          "# ervisio-inline\nset -eu\np0=$1; shift;\nscript=$(printf '%s' \"$@\" | base64 -d)\nsystemctl stop ervisio-todo-update.service 2>/dev/null || :; systemctl reset-failed ervisio-todo-update.service 2>/dev/null || :; umask 077; d=/opt/ervisio-todo/.plugin-config; mkdir -p \"$d\"; chmod 700 \"$d\"; printf '%s\\n' \"$script\" > \"$d/update-docker.sh\"; exec systemd-run --unit=ervisio-todo-update --remain-after-exit --setenv=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin sh \"$d/update-docker.sh\" \"$p0\"",
           "update-docker",
           "{0}",
           "c2V0IC1ldQp1bWFzayAwNzcKdj0iJDEiCmQ9L29wdC9lcnZpc2lvLXRvZG8KWyAtZiAiJGQvY29tcG9zZS55YW1sIiBdIHx8IHsgZWNobyAiTm8gRG9ja2VyIGluc3RhbGxhdGlvbiBpbiAkZCI7IGV4aXQgMTsgfQpjb21tYW5kIC12IGZsb2NrID4vZGV2L251bGwgfHwgeyBlY2hvICJmbG9jayBpcyByZXF1aXJlZCB0byBwcm90ZWN0IGRlcGxveW1lbnQgY29uZmlndXJhdGlvbiI7IGV4aXQgMTsgfQpjZCAiJGQiCmV4ZWMgOT4ucGx1Z2luLWNvbmZpZy5sb2NrCmZsb2NrIC1uIDkgfHwgeyBlY2hvICJEZXBsb3ltZW50IGNvbmZpZ3VyYXRpb24gaXMgYnVzeTsgcmV0cnkgd2hlbiB0aGUgY3VycmVudCBvcGVyYXRpb24gZmluaXNoZXMiOyBleGl0IDE7IH0KbWtkaXIgLXAgLnBsdWdpbi1jb25maWcKY2htb2QgNzAwIC5wbHVnaW4tY29uZmlnCnRyYXAgJ3JtIC1mIC5wbHVnaW4tY29uZmlnL2NvbnRhaW5lci5qc29uIC5wbHVnaW4tY29uZmlnL2ltYWdlLmpzb24nIEVYSVQKdHJhcCAnZXhpdCAxJyBIVVAgSU5UIFRFUk0KY29udGFpbmVyPSQoZG9ja2VyIGNvbXBvc2UgcHMgLS1hbGwgLS1xdWlldCBhcHApClsgLW4gIiRjb250YWluZXIiIF0gfHwgeyBlY2hvICJObyBhcHAgY29udGFpbmVyIGF2YWlsYWJsZSB0byBwcmVzZXJ2ZSBkZXBsb3ltZW50IGNvbmZpZ3VyYXRpb24iOyBleGl0IDE7IH0KaW1hZ2U9JChkb2NrZXIgaW5zcGVjdCAtLWZvcm1hdCAne3suSW1hZ2V9fScgIiRjb250YWluZXIiKQpkb2NrZXIgaW5zcGVj",

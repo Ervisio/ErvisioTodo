@@ -7,6 +7,7 @@ import {
   writeFileSync,
   rmSync,
   existsSync,
+  statSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -35,6 +36,24 @@ function fixture() {
   writeFileSync(join(directory, ".env"), initialEnv, { mode: 0o600 });
   writeFileSync(join(directory, "compose.yaml"), "services: {}\n");
   writeFileSync(join(bin, "flock"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+  writeFileSync(join(bin, "systemctl"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+  writeFileSync(
+    join(bin, "systemd-run"),
+    `#!/usr/bin/env node
+const fs = require('node:fs');
+const cp = require('node:child_process');
+const assert = require('node:assert/strict');
+const args = process.argv.slice(2);
+assert.ok(args.every(arg => !/[\u0024%]/.test(arg)), 'systemd ExecStart must not contain code or environment/specifier expansions');
+const start = args.indexOf('sh');
+assert.notEqual(start, -1);
+assert.notEqual(args[start + 1], '-c', 'Pass a script file, never shell source, through systemd');
+fs.writeFileSync(process.env.CONFIG_DIR + '/systemd-argv.json', JSON.stringify(args));
+const result = cp.spawnSync('sh', args.slice(start + 1), {stdio:'inherit'});
+process.exit(result.status ?? 1);
+`,
+    { mode: 0o755 },
+  );
   writeFileSync(
     join(bin, "docker"),
     `#!/usr/bin/env node
@@ -65,7 +84,13 @@ else if (args[0] === 'compose' && args[1] === 'up') fs.writeFileSync(process.env
       .replaceAll("/opt/ervisio-todo", directory);
     const argv = command.argv
       .slice(0, offset)
-      .map((part: string) => (part === "{0}" ? id : part));
+      .map((part: string) =>
+        part === "{0}"
+          ? id
+          : part === "{1}"
+            ? "https://install.example.com"
+            : part.replaceAll("/opt/ervisio-todo", directory),
+      );
     argv.push(
       ...(Buffer.from(source)
         .toString("base64")
@@ -126,6 +151,63 @@ test("deployment commands recover live configuration, redact secrets, save and r
       readFileSync(join(f.directory, "applied"), "utf8"),
       /--force-recreate --wait/,
     );
+  } finally {
+    f.cleanup();
+  }
+});
+
+test("generated Docker update passes a private script file through systemd and preserves recovery code", () => {
+  const f = fixture();
+  try {
+    const result = f.run("update-docker", manifest.version);
+    assert.equal(result.status, 0, result.stderr);
+    const env = readFileSync(join(f.directory, ".env"), "utf8");
+    assert.ok(env.includes('AUTH_SECRET="' + "s".repeat(40) + '"'));
+    assert.ok(env.includes('AUTH_URL="https://live.example.com"'));
+    assert.ok(env.includes(`ERVISIO_VERSION="${manifest.version}"`));
+    const script = readFileSync(
+      join(f.directory, ".plugin-config/update-docker.sh"),
+      "utf8",
+    );
+    assert.ok(script.includes("${key}"));
+    assert.ok(script.includes("${version}.json"));
+    assert.equal(
+      statSync(join(f.directory, ".plugin-config")).mode & 0o777,
+      0o700,
+    );
+    assert.equal(
+      statSync(join(f.directory, ".plugin-config/update-docker.sh")).mode &
+        0o777,
+      0o600,
+    );
+    assert.ok(existsSync(join(f.directory, "applied")));
+  } finally {
+    f.cleanup();
+  }
+});
+
+test("generated install preserves its script and forwards version and public URL through systemd", () => {
+  const f = fixture();
+  try {
+    mkdirSync(join(f.directory, "deploy"));
+    writeFileSync(
+      join(f.directory, "deploy/ervisio-setup.sh"),
+      '#!/bin/sh\nprintf "%s" "$2" > installed-url\n',
+      { mode: 0o755 },
+    );
+    const result = f.run("install-docker", manifest.version);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(
+      readFileSync(join(f.directory, "installed-url"), "utf8"),
+      "https://install.example.com",
+    );
+    const argv = JSON.parse(
+      readFileSync(join(f.directory, "systemd-argv.json"), "utf8"),
+    );
+    assert.deepEqual(argv.slice(-2), [
+      manifest.version,
+      "https://install.example.com",
+    ]);
   } finally {
     f.cleanup();
   }

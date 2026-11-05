@@ -10,7 +10,7 @@ Il colore accento si modifica con campioni, codice HEX o il selettore con tonali
 
 Le preferenze e i temi personali sono conservati su questo browser/dispositivo. Un cookie contiene la palette attiva per applicarla già nel rendering del server, evitando il cambio di colori dopo un refresh. Esporta temi consente di trasferire la libreria su un altro dispositivo.
 
-I colori e il branding già salvati nelle liste non vengono modificati. **Usa i colori delle liste** è disattivato per impostazione predefinita: se lo attivi, i contenuti della lista usano lo sfondo e l’accento configurati dal proprietario. Il resto dell’interfaccia mantiene la palette personale. Nome, icona, favicon e URL della lista rimangono indipendenti dal tema personale.
+I colori e il branding già salvati nelle liste non vengono modificati. **Usa i colori delle liste** è disattivato per impostazione predefinita: se lo attivi, i contenuti della lista usano lo sfondo e l’accento configurati dal proprietario. Le nuove liste seguono lo sfondo del tema personale anche con i colori delle liste abilitati. Nel form lista, **Usa lo sfondo del tema** rimuove lo sfondo personalizzato; un colore HEX lo sostituisce. Nell’API `backgroundColor` vuoto (`""`, valore predefinito) indica questa eredità. I colori espliciti delle liste esistenti sono preservati. Il resto dell’interfaccia mantiene la palette personale. Nome, icona, favicon e URL della lista rimangono indipendenti dal tema personale.
 
 ## Riferimenti delle palette
 

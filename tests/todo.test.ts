@@ -788,3 +788,26 @@ test("account disabling revokes tokens, prevents OAuth login, and protects the l
   changeManagedUser(bob, { active: true }, byId(alice)!);
   assert.equal(byId(bob)?.is_active, 1);
 });
+
+test("list background follows the theme unless explicitly customized", () => {
+  const created = saveList(
+    { title: "Theme default", slug: "theme-default" },
+    alice,
+  );
+  assert.equal(created.backgroundColor, "");
+  const customized = saveList(
+    { backgroundColor: "#131a22" },
+    alice,
+    created._id,
+  );
+  assert.equal(customized.backgroundColor, "#131a22");
+  assert.equal(
+    saveList({ title: "Renamed" }, alice, created._id).backgroundColor,
+    "#131a22",
+  );
+  assert.equal(
+    saveList({ backgroundColor: "" }, alice, created._id).backgroundColor,
+    "",
+  );
+  assert.throws(() => saveList({ backgroundColor: "red" }, alice, created._id));
+});

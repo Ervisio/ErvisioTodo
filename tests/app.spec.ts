@@ -74,12 +74,10 @@ test("registration, login, complete task workflow, permissions, recovery and mob
     exact: true,
   });
   await listDialog.getByLabel("Nome lista").fill("Progetti Ervisio");
-  await expect(listDialog.getByLabel("Colore principale")).toHaveValue(
-    "#b94406",
-  );
-  await expect(listDialog.getByLabel("Sfondo", { exact: true })).toHaveValue(
-    "#ffffff",
-  );
+  await expect(
+    listDialog.getByLabel("Colore principale", { exact: true }),
+  ).toHaveValue("#b94406");
+  await expect(listDialog.getByLabel("Usa lo sfondo del tema")).toBeChecked();
   await listDialog
     .getByRole("button", { name: "Salva lista", exact: true })
     .click();
@@ -139,7 +137,7 @@ test("registration, login, complete task workflow, permissions, recovery and mob
     task = tasks.data[0];
   expect(list.slug).toBe("progetti-ervisio");
   expect(list.accentColor).toBe("#b94406");
-  expect(list.backgroundColor).toBe("#ffffff");
+  expect(list.backgroundColor).toBe("");
   const tagResponse = await write(page.request, "/api/admin/todo/tags", {
       listId: list._id,
       name: "Rilascio",
@@ -548,7 +546,39 @@ test("registration, login, complete task workflow, permissions, recovery and mob
   );
   await page.goto("/settings");
   await page.getByRole("button", { name: "Generali", exact: true }).click();
+  const saveSettings = page.getByRole("button", {
+    name: "Salva impostazioni",
+    exact: true,
+  });
+  await expect(saveSettings).toBeInViewport();
+  await expect(saveSettings).toBeDisabled();
+  await page.getByLabel("Nome dello spazio").fill("Da annullare");
+  await expect(saveSettings).toBeEnabled();
+  await page
+    .locator(".settings-save")
+    .getByRole("button", { name: "Annulla", exact: true })
+    .click();
+  await expect(page.getByLabel("Nome dello spazio")).not.toHaveValue(
+    "Da annullare",
+  );
+  await expect(saveSettings).toBeDisabled();
   await page.getByLabel("Nome dello spazio").fill("Ervisio Workspace");
+  await page.evaluate(() => scrollTo(0, 0));
+  await expect(saveSettings).toBeInViewport();
+  await page.screenshot({ path: "test-results/settings-save-desktop.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(saveSettings).toBeInViewport();
+  await page.evaluate(() => scrollTo(0, document.body.scrollHeight));
+  await expect(saveSettings).toBeInViewport();
+  await page.evaluate(() => scrollTo(0, 0));
+  await expect(saveSettings).toBeInViewport();
+  await page.screenshot({ path: "test-results/settings-save-mobile.png" });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.setViewportSize({ width: 1440, height: 980 });
   await page
     .getByRole("button", { name: "Salva impostazioni", exact: true })
     .click();
@@ -1049,4 +1079,97 @@ test("themes stay consistent across lists, navigation and reload; custom themes 
     fullPage: true,
   });
   expect(errors).toEqual([]);
+});
+
+test("overview and favorites selection, theme background, and custom list color picker", async ({
+  page,
+}) => {
+  await register(page.request, "appearance_bugs");
+  await login(page.request, "appearance_bugs");
+  const created = await (
+    await write(page.request, "/api/admin/todo/lists", {
+      title: "Aspetto lista",
+      slug: "aspetto-lista",
+    })
+  ).json();
+  expect(created.data.backgroundColor).toBe("");
+  await page.goto("/settings");
+  await page.getByLabel("Tema", { exact: true }).selectOption("dark");
+  await page.getByLabel("Usa i colori delle liste", { exact: true }).check();
+  await page.goto("/l/aspetto-lista");
+  const navigation = page.getByRole("complementary", { name: "Navigazione" });
+  const overview = navigation.getByRole("button", {
+    name: "Panoramica",
+    exact: true,
+  });
+  const favorites = navigation.getByRole("button", {
+    name: "Preferiti",
+    exact: true,
+  });
+  await overview.click();
+  await expect(overview).toHaveAttribute("aria-current", "page");
+  await favorites.click();
+  await expect(favorites).toHaveAttribute("aria-current", "page");
+  await expect(overview).not.toHaveAttribute("aria-current", "page");
+  await overview.click();
+  await expect(overview).toHaveAttribute("aria-current", "page");
+  await expect(favorites).not.toHaveAttribute("aria-current", "page");
+  await expect(page.locator(".task-surface").first()).toHaveCSS(
+    "background-color",
+    "rgb(32, 38, 49)",
+  );
+  await page.getByRole("button", { name: "Altre azioni", exact: true }).click();
+  await page
+    .getByRole("menuitem", { name: "Modifica lista", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", {
+    name: "Modifica lista",
+    exact: true,
+  });
+  await expect(dialog.getByLabel("Usa lo sfondo del tema")).toBeChecked();
+  await dialog.getByLabel("Usa lo sfondo del tema").uncheck();
+  await dialog
+    .getByRole("button", { name: "Seleziona Sfondo", exact: true })
+    .click();
+  await page.screenshot({
+    path: "test-results/color-picker-desktop.png",
+    animations: "disabled",
+  });
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeVisible();
+  await expect(
+    dialog.getByRole("dialog", { name: "Sfondo: selettore" }),
+  ).not.toBeVisible();
+  await dialog
+    .getByRole("button", { name: "Seleziona Sfondo", exact: true })
+    .click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(
+    dialog.getByRole("dialog", { name: "Sfondo: selettore" }),
+  ).toBeInViewport({ ratio: 1 });
+  await page.screenshot({
+    path: "test-results/color-picker-mobile.png",
+    animations: "disabled",
+  });
+  await page.setViewportSize({ width: 1440, height: 980 });
+  await expect(
+    dialog.getByRole("dialog", { name: "Sfondo: selettore" }),
+  ).toBeVisible();
+  await dialog.getByLabel("Sfondo", { exact: true }).fill("#131a22");
+  await dialog.getByRole("button", { name: "Chiudi selettore colore" }).click();
+  await dialog
+    .getByRole("button", { name: "Salva lista", exact: true })
+    .click();
+  await expect(page.locator(".task-surface").first()).toHaveCSS(
+    "background-color",
+    "rgb(19, 26, 34)",
+  );
+  await page.screenshot({ path: "test-results/appearance-desktop.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: "test-results/appearance-mobile.png" });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
 });

@@ -138,6 +138,11 @@ export const translations: Record<string, string> = {
   Limite: "Limit",
   Illimitato: "Unlimited",
   "Impostazioni salvate.": "Settings saved.",
+  "Salvataggio impostazioni": "Save settings",
+  "Modifiche non salvate": "Unsaved changes",
+  "Impostazioni aggiornate": "Settings up to date",
+  "Le preferenze personali si salvano automaticamente.":
+    "Personal preferences save automatically.",
   "Salva impostazioni": "Save settings",
   "Salvataggio…": "Saving…",
   "Accesso e registrazione": "Sign-in and registration",

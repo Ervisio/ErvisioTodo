@@ -1,6 +1,13 @@
 "use client";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { isHex, hexToHsv, hsvToHex } from "@/lib/themes";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useId,
+  type CSSProperties,
+} from "react";
+import { ACCENT_SWATCHES, isHex, hexToHsv, hsvToHex } from "@/lib/themes";
 export function ColorInput({
   value,
   onChange,
@@ -10,6 +17,10 @@ export function ColorInput({
   onChange: (value: string) => void;
   label: string;
 }) {
+  const id = useId();
+  const trigger = useRef<HTMLButtonElement>(null),
+    popover = useRef<HTMLSpanElement>(null);
+  const [side, setSide] = useState<"top" | "bottom">("bottom");
   const [open, setOpen] = useState(false),
     [text, setText] = useState(value),
     root = useRef<HTMLSpanElement>(null),
@@ -24,14 +35,37 @@ export function ColorInput({
     const close = (event: PointerEvent) => {
         if (!root.current?.contains(event.target as Node)) setOpen(false);
       },
-      escape = (event: KeyboardEvent) => {
-        if (event.key === "Escape") setOpen(false);
+      closeOnBlur = (event: FocusEvent) => {
+        if (!root.current?.contains(event.target as Node)) setOpen(false);
       };
     document.addEventListener("pointerdown", close);
-    document.addEventListener("keydown", escape);
+    document.addEventListener("focusin", closeOnBlur);
     return () => {
       document.removeEventListener("pointerdown", close);
-      document.removeEventListener("keydown", escape);
+      document.removeEventListener("focusin", closeOnBlur);
+    };
+  }, [open]);
+  useLayoutEffect(() => {
+    if (!open) return;
+    function place() {
+      if (!root.current || !popover.current) return;
+      const rect = root.current.getBoundingClientRect();
+      const dialog = root.current.closest("dialog")?.getBoundingClientRect();
+      const below =
+        Math.min(innerHeight, dialog?.bottom ?? innerHeight) - rect.bottom - 16;
+      const above = rect.top - Math.max(0, dialog?.top ?? 0) - 16;
+      setSide(
+        below < popover.current.offsetHeight && above > below
+          ? "top"
+          : "bottom",
+      );
+    }
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
     };
   }, [open]);
   const hsv = hexToHsv(value),
@@ -44,10 +78,24 @@ export function ColorInput({
     onChange(hsvToHex(h, s, v));
   }
   return (
-    <span className="color-input" ref={root}>
+    <span
+      className="color-input"
+      ref={root}
+      onKeyDown={(event) => {
+        if (open && event.key === "Escape") {
+          event.preventDefault();
+          event.stopPropagation();
+          setOpen(false);
+          trigger.current?.focus();
+        }
+      }}
+    >
       <button
         type="button"
         className="color-trigger"
+        ref={trigger}
+        aria-haspopup="dialog"
+        aria-controls={open ? id : undefined}
         aria-label={`Seleziona ${label}`}
         aria-expanded={open}
         onClick={() => setOpen(!open)}
@@ -74,6 +122,9 @@ export function ColorInput({
       />
       {open && (
         <span
+          id={id}
+          ref={popover}
+          data-side={side}
           role="dialog"
           aria-label={`${label}: selettore`}
           className="color-popover"
@@ -168,6 +219,18 @@ export function ColorInput({
               );
             }}
           />
+          <span className="color-samples" aria-label="Campioni colore">
+            {ACCENT_SWATCHES.map((color) => (
+              <button
+                type="button"
+                key={color}
+                aria-label={`Usa ${color}`}
+                aria-pressed={value.toLowerCase() === color.toLowerCase()}
+                style={{ "--swatch": color } as CSSProperties}
+                onClick={() => onChange(color)}
+              />
+            ))}
+          </span>
           <span className="color-popover-value">
             <i style={{ background: value }} />
             {value.toUpperCase()}

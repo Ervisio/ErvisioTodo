@@ -8,6 +8,7 @@ import { z } from "zod";
 import useSWR from "swr";
 import { AdminField } from "@/components/admin/AdminFields";
 import { ImageUploadField } from "@/components/admin/ImageUploadField";
+import { ColorInput } from "@/components/ColorInput";
 import { ListIcon } from "@/components/ui/ListIcon";
 import type { TodoProjectPlain, TodoListPlain } from "@/types/todo";
 const schema = z.object({
@@ -77,7 +78,7 @@ export function TodoListForm({
       slug: initial?.slug || "",
       subdomain: initial?.subdomain || "",
       accentColor: initial?.accentColor || "#b94406",
-      backgroundColor: initial?.backgroundColor || "#ffffff",
+      backgroundColor: initial?.backgroundColor ?? "",
       faviconUrl: initial?.faviconUrl || "",
     },
   });
@@ -186,23 +187,42 @@ export function TodoListForm({
           subfolder="branding"
         />
       )}
-      <div className="grid grid-cols-2 gap-4">
-        <label className="field">
-          Colore principale
-          <input
-            type="color"
+      <div className="list-color-fields">
+        <div className="field">
+          <span>Colore principale</span>
+          <ColorInput
+            label="Colore principale"
             value={values.accentColor}
-            onChange={(e) => setValue("accentColor", e.target.value)}
+            onChange={(color) => setValue("accentColor", color)}
           />
-        </label>
-        <label className="field">
-          Sfondo
-          <input
-            type="color"
-            value={values.backgroundColor}
-            onChange={(e) => setValue("backgroundColor", e.target.value)}
-          />
-        </label>
+        </div>
+        <div className="field">
+          <span>Sfondo</span>
+          <label className="theme-background-toggle">
+            <input
+              type="checkbox"
+              checked={!values.backgroundColor}
+              onChange={(event) =>
+                setValue(
+                  "backgroundColor",
+                  event.target.checked
+                    ? ""
+                    : getComputedStyle(document.documentElement)
+                        .getPropertyValue("--sheet")
+                        .trim(),
+                )
+              }
+            />
+            Usa lo sfondo del tema
+          </label>
+          {values.backgroundColor && (
+            <ColorInput
+              label="Sfondo"
+              value={values.backgroundColor}
+              onChange={(color) => setValue("backgroundColor", color)}
+            />
+          )}
+        </div>
       </div>
       <ImageUploadField
         label="Favicon"

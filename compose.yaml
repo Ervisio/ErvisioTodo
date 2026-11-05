@@ -2,7 +2,7 @@ name: ervisiotodo
 services:
   app:
     build: .
-    image: ghcr.io/ervisio/ervisio-todo:${ERVISIO_VERSION:-0.3.0}
+    image: ghcr.io/ervisio/ervisio-todo:${ERVISIO_VERSION:-0.3.1}
     restart: unless-stopped
     init: true
     env_file: .env

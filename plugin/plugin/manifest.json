@@ -1,7 +1,7 @@
 {
   "id": "todo",
   "name": "ErvisioTodo",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Install, run and update ErvisioTodo on this machine with Docker: workspace settings, mail test, live logs and updates.",
   "author": "Riccardo Reccia",
   "icon": "list",

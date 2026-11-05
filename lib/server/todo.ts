@@ -71,7 +71,7 @@ export const listSchema = z.object({
     .regex(/^$|^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Sottodominio non valido")
     .default(""),
   accentColor: color.default("#b94406"),
-  backgroundColor: color.default("#ffffff"),
+  backgroundColor: z.union([z.literal(""), color]).default(""),
   faviconUrl: assetUrl.default(""),
 });
 const attachmentSchema = z.object({

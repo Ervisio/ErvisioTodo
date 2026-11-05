@@ -50,9 +50,18 @@ export function SettingsForm({ admin }: { admin: boolean }) {
   useEffect(() => {
     if (data) setDraft({ ...data.workspace, ...data.settings });
   }, [data]);
+  const savedDraft = data ? { ...data.workspace, ...data.settings } : null;
+  const dirty =
+    draft !== null && JSON.stringify(draft) !== JSON.stringify(savedDraft);
+  function discard() {
+    setDraft(savedDraft);
+    setMessage("");
+    setSaveError("");
+  }
   const set = (key: keyof Draft, value: unknown) => {
     setDraft((current) => (current ? { ...current, [key]: value } : null));
     setMessage("");
+    setSaveError("");
   };
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -388,8 +397,26 @@ export function SettingsForm({ admin }: { admin: boolean }) {
                   </>
                 )}
               </section>
-              <div className="settings-save">
-                <div>
+              <div
+                className="settings-save"
+                role="region"
+                aria-label={t("Salvataggio impostazioni")}
+              >
+                <div className="settings-save-status">
+                  <strong>
+                    {t(
+                      busy
+                        ? "Salvataggio…"
+                        : dirty
+                          ? "Modifiche non salvate"
+                          : "Impostazioni aggiornate",
+                    )}
+                  </strong>
+                  {!saveError && !message && (
+                    <p>
+                      {t("Le preferenze personali si salvano automaticamente.")}
+                    </p>
+                  )}
                   {saveError && (
                     <p className="error" role="alert">
                       {saveError}
@@ -401,9 +428,19 @@ export function SettingsForm({ admin }: { admin: boolean }) {
                     </p>
                   )}
                 </div>
-                <button className="button" disabled={busy}>
-                  {t(busy ? "Salvataggio…" : "Salva impostazioni")}
-                </button>
+                <div className="settings-save-actions">
+                  <button
+                    type="button"
+                    className="button secondary"
+                    disabled={busy || !dirty}
+                    onClick={discard}
+                  >
+                    {t("Annulla")}
+                  </button>
+                  <button className="button" disabled={busy || !dirty}>
+                    {t(busy ? "Salvataggio…" : "Salva impostazioni")}
+                  </button>
+                </div>
               </div>
             </form>
           )}

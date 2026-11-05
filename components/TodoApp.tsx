@@ -31,7 +31,13 @@ import {
   faHouse,
   faChevronRight,
 } from "@fortawesome/free-solid-svg-icons";
-import { THEME_PRESETS, luminance, themeVariables } from "@/lib/themes";
+import {
+  THEME_PRESETS,
+  contrast,
+  luminance,
+  rgbChannels,
+  themeVariables,
+} from "@/lib/themes";
 import { dataFetcher, apiFetch } from "@/lib/client";
 import { usePreferences } from "./Preferences";
 import { AdminModal } from "./admin/AdminModal";
@@ -56,6 +62,18 @@ function surfaceStyle(
   useListColors: boolean,
 ): CSSProperties | undefined {
   if (!useListColors) return undefined;
+  if (!list.backgroundColor)
+    return {
+      "--accent": list.accentColor,
+      "--accent-ch": rgbChannels(list.accentColor).join(" "),
+      "--accent-ink": "rgb(var(--fg))",
+      "--accent-soft": "color-mix(in srgb, var(--accent) 12%, var(--sheet))",
+      "--on-accent":
+        contrast(list.accentColor, "#ffffff") >=
+        contrast(list.accentColor, "#111111")
+          ? "#ffffff"
+          : "#111111",
+    } as CSSProperties;
   const dark = luminance(list.backgroundColor) < 0.18;
   const base = THEME_PRESETS[dark ? 1 : 0];
   const palette = {
@@ -599,13 +617,20 @@ export default function TodoApp({
               setSelectedProjectId(undefined);
               setSelectedListId(lists[0]?._id || null);
               setSelectedTaskId(null);
+              setTab("active");
+              setTagIds([]);
+              setMobileOpen(false);
             },
-            selectedProjectId === undefined,
+            selectedProjectId === undefined && tab !== "favorites",
           )}
           {nav(
             t("Preferiti"),
             faStar,
-            () => setTab("favorites"),
+            () => {
+              setTab("favorites");
+              setSelectedTaskId(null);
+              setMobileOpen(false);
+            },
             tab === "favorites",
           )}
         </div>

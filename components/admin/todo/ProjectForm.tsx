@@ -1,4 +1,5 @@
 "use client";
+import { ColorInput } from "@/components/ColorInput";
 import { useState } from "react";
 import useSWR from "swr";
 import { dataFetcher } from "@/lib/client";
@@ -126,14 +127,14 @@ export function ProjectForm({
             onChange={(e) => setValue({ ...value, iconValue: e.target.value })}
           />
         </label>
-        <label className="field">
-          {t("Colore")}
-          <input
-            type="color"
+        <div className="field">
+          <span>{t("Colore")}</span>
+          <ColorInput
+            label={t("Colore")}
             value={value.color}
-            onChange={(e) => setValue({ ...value, color: e.target.value })}
+            onChange={(color) => setValue({ ...value, color })}
           />
-        </label>
+        </div>
       </div>
       <fieldset>
         <legend className="mb-2 text-sm font-medium">{t("Membri")}</legend>

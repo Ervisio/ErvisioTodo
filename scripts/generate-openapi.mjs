@@ -39,7 +39,13 @@ const schemas = {
       members: { ...ids, default: [] },
       aiContext: str(8000),
       accentColor: { ...color, default: "#b94406" },
-      backgroundColor: { ...color, default: "#ffffff" },
+      backgroundColor: {
+        type: "string",
+        pattern: "^$|^#[0-9a-fA-F]{6}$",
+        default: "",
+        description:
+          "Vuoto segue lo sfondo del tema personale; HEX imposta uno sfondo esplicito quando i colori delle liste sono abilitati.",
+      },
       faviconUrl: str(2048),
     },
   },
@@ -1217,7 +1223,7 @@ writeFileSync(
       openapi: "3.1.0",
       info: {
         title: "ErvisioTodo",
-        version: "0.3.0",
+        version: "0.3.1",
         description:
           "API con sessione HTTP-only e token Bearer personali. Auth.js /api/auth/* usa il proprio protocollo CSRF/OAuth ed è documentato dal progetto Auth.js. Nessuna API key pubblica. Vedi API.md per permessi e semantica.",
       },

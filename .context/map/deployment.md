@@ -12,7 +12,7 @@ Invariants:
 - AUTH_COOKIE_DOMAIN must match BASE_DOMAIN and include AUTH_URL's hostname; changing AUTH_SECRET invalidates sessions.
 - Caddy on-demand TLS asks /api/caddy/ask; security.allowedHost authorizes the canonical host and assigned list subdomains.
 - Plugin socket: with PLUGIN_SOCKET set, scripts/plugin-socket.mjs (started by start.mjs and, in Docker, scripts/docker-entry.mjs as CMD) sets a per-start PLUGIN_SECRET before Next loads; /api/plugin/* handlers 404 without it (lib/server/plugin-api.ts). Never read PLUGIN_SECRET from .env: the start code overwrites or deletes it.
-- Docker socket dir /run/ervisio-todo must be owned by uid 1000 on the host (deploy/ervisio-setup.sh + tmpfiles.d); otherwise the proxy logs an error and the app runs without the socket. compose.yaml image is ghcr.io/ervisio/ervisio-todo:${ERVISIO_VERSION}; keep package.json version, docs/openapi.json and scripts/generate-openapi.mjs in step.
+- Docker socket dir /run/ervisio-todo must be owned by uid 1000 on the host (deploy/ervisio-setup.sh + tmpfiles.d); otherwise the proxy logs an error and the app runs without the socket. compose.yaml image is ghcr.io/ervisio/ervisio-todo:${ERVISIO_VERSION}; keep root/plugin package.json and lock versions, plugin manifest/catalog entry, compose default, .env.example and generated OpenAPI version in step. Push vX.Y.Z to run .github/workflows/release.yml (plugin tarball/checksum plus amd64/arm64 GHCR image); plugin release notifies Ervisio/plugins registry.
 - Plugin activity rows use actor NULL (activity.actor is a FK to users).
   Gotchas:
 - DNS for the canonical host and wildcard subdomains must point to the server separately from app settings.

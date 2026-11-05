@@ -72,7 +72,7 @@ test("status has the contract shape", async () => {
   const response = await call(statusGet, "GET", SECRET);
   assert.equal(response.status, 200);
   const body = await response.json();
-  assert.equal(body.version, "0.3.0");
+  assert.equal(body.version, "0.3.1");
   assert.equal(body.publicUrl, "https://todo.example.test");
   assert.equal(body.restartRequired, false);
   assert.equal(body.mailEnabled, false);

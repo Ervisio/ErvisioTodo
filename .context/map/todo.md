@@ -12,6 +12,7 @@ Creation: the per-project "+" in the sidebar calls TodoApp newList(projectId).
 Invariants:
 
 - TodoApp selectedProjectId is tri-state: undefined means overview, null means standalone lists, string means one project. Route initialization waits for lists.
+- Overview and Favorites are exclusive navigation tabs: choosing Overview resets the active tab and tag filters; choosing Favorites clears task selection. Do not mark Overview active while the favorites filter is selected.
 - Service-level getList/listAccess and projectAccess enforce ownership/membership and token resource policy. An empty member list never makes a resource public, even for admins.
 - Project members inherit access to its lists; project owners can manage member-owned lists without taking ownership.
 - Deleting a project detaches its lists and preserves tasks. Removing membership prunes assignments that are no longer allowed.

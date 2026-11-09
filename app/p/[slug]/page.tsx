@@ -1,5 +1,4 @@
 import TodoApp from "@/components/TodoApp";
-import { AppHeader } from "@/components/AppHeader";
 import { pageUser } from "@/lib/server/page";
 import { projectBySlug } from "@/lib/server/projects";
 import { notFound } from "next/navigation";
@@ -20,9 +19,12 @@ export default async function ProjectPage({
   if (!project) notFound();
   return (
     <>
-      <AppHeader name={user.username} role={user.role} />
-      <main className="workspace">
-        <TodoApp initialProjectId={project._id} currentUserId={user.id} />
+      <main className="workspace glass-workspace">
+        <TodoApp
+          initialProjectId={project._id}
+          currentUserId={user.id}
+          userName={user.username}
+        />
       </main>
     </>
   );

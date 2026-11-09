@@ -1,5 +1,4 @@
 import TodoApp from "@/components/TodoApp";
-import { AppHeader } from "@/components/AppHeader";
 import { pageUser } from "@/lib/server/page";
 import { listBySlug } from "@/lib/server/todo";
 import { notFound } from "next/navigation";
@@ -20,9 +19,12 @@ export default async function ListPage({
   if (!list) notFound();
   return (
     <>
-      <AppHeader name={user.username} role={user.role} />
-      <main className="workspace">
-        <TodoApp initialListId={list._id} currentUserId={user.id} />
+      <main className="workspace glass-workspace">
+        <TodoApp
+          initialListId={list._id}
+          currentUserId={user.id}
+          userName={user.username}
+        />
       </main>
     </>
   );

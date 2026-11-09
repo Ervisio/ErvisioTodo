@@ -24,7 +24,15 @@ type Data = {
   usage: { bytes: number; files: number };
   baseDomain: string;
 };
-export function SettingsForm({ admin }: { admin: boolean }) {
+/** "personal" renders the device preferences; "workspace" the admin form (only when admin). */
+export function SettingsForm({
+  admin,
+  section = "personal",
+}: {
+  admin: boolean;
+  section?: "personal" | "workspace";
+}) {
+  admin = admin && section === "workspace";
   const { preferences, setPreference, t } = usePreferences(),
     { data, error, mutate } = useSWR<Data>(
       admin ? "/api/admin/settings" : null,
@@ -139,54 +147,52 @@ export function SettingsForm({ admin }: { admin: boolean }) {
   }
   return (
     <>
-      <section className="settings-section">
-        <h2>{t("Le tue preferenze")}</h2>
-        <p className="settings-help">
-          {t("Preferenze salvate su questo dispositivo.")}
-        </p>
-        <label className="settings-row">
-          <strong>{t("Lingua")}</strong>
-          <select
-            aria-label={t("Lingua")}
-            value={preferences.locale}
-            onChange={(e) =>
-              setPreference({ locale: e.target.value as "it" | "en" })
-            }
-          >
-            <option value="it">Italiano</option>
-            <option value="en">English</option>
-          </select>
-        </label>
-        <ThemeSettings />
-        <label className="settings-row">
-          <div>
-            <strong>{t("Editor attività")}</strong>
-            <p>{t("Apertura dell’editor durante creazione e modifica.")}</p>
-          </div>
-          <select
-            aria-label={t("Editor attività")}
-            value={preferences.editorLayout}
-            onChange={(e) =>
-              setPreference({
-                editorLayout: e.target.value as "panel" | "dialog",
-              })
-            }
-          >
-            <option value="panel">{t("Pannello laterale")}</option>
-            <option value="dialog">{t("Finestra")}</option>
-          </select>
-        </label>
-        <label className="settings-row">
-          <strong>{t("Suoni delle attività")}</strong>
-          <input
-            aria-label={t("Suoni delle attività")}
-            className="switch"
-            type="checkbox"
-            checked={preferences.sounds}
-            onChange={(e) => setPreference({ sounds: e.target.checked })}
-          />
-        </label>
-      </section>
+      {section === "personal" && (
+        <section className="settings-section">
+          <label className="settings-row">
+            <strong>{t("Lingua")}</strong>
+            <select
+              aria-label={t("Lingua")}
+              value={preferences.locale}
+              onChange={(e) =>
+                setPreference({ locale: e.target.value as "it" | "en" })
+              }
+            >
+              <option value="it">Italiano</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+          <ThemeSettings />
+          <label className="settings-row">
+            <div>
+              <strong>{t("Editor attività")}</strong>
+              <p>{t("Apertura dell’editor durante creazione e modifica.")}</p>
+            </div>
+            <select
+              aria-label={t("Editor attività")}
+              value={preferences.editorLayout}
+              onChange={(e) =>
+                setPreference({
+                  editorLayout: e.target.value as "panel" | "dialog",
+                })
+              }
+            >
+              <option value="panel">{t("Pannello laterale")}</option>
+              <option value="dialog">{t("Finestra")}</option>
+            </select>
+          </label>
+          <label className="settings-row">
+            <strong>{t("Suoni delle attività")}</strong>
+            <input
+              aria-label={t("Suoni delle attività")}
+              className="switch"
+              type="checkbox"
+              checked={preferences.sounds}
+              onChange={(e) => setPreference({ sounds: e.target.checked })}
+            />
+          </label>
+        </section>
+      )}
       {admin && (
         <>
           {error && (
@@ -412,11 +418,6 @@ export function SettingsForm({ admin }: { admin: boolean }) {
                           : "Impostazioni aggiornate",
                     )}
                   </strong>
-                  {!saveError && !message && (
-                    <p>
-                      {t("Le preferenze personali si salvano automaticamente.")}
-                    </p>
-                  )}
                   {saveError && (
                     <p className="error" role="alert">
                       {saveError}

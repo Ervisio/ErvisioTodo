@@ -417,6 +417,44 @@ export function tasksFor(
     .sort((a, b) => a.order - b.order)
     .map((t) => enrichTask(t, counts));
 }
+export type SmartView = "today" | "important";
+/** Open tasks across every list the user can see: due in [from, to) for "today", starred for "important". */
+export function smartTasks(
+  userId: string,
+  view: SmartView,
+  from?: string | null,
+  to?: string | null,
+) {
+  const start = Date.parse(from || ""),
+    end = Date.parse(to || "");
+  insist(
+    view !== "today" || (start < end && end - start <= 2 * 86_400_000),
+    400,
+    "Intervallo non valido",
+  );
+  return listsFor(userId).flatMap((list) => {
+    const counts = childCounts(list._id);
+    return rawTasks(list._id)
+      .filter((t) => {
+        if (t.isCompleted) return false;
+        if (view === "important") return t.isFavorite;
+        const due = t.dueDate ? Date.parse(String(t.dueDate)) : NaN;
+        return due >= start && due < end;
+      })
+      .sort((a, b) => a.order - b.order)
+      .map((t) => enrichTask(t, counts));
+  });
+}
+export function smartCounts(
+  userId: string,
+  from?: string | null,
+  to?: string | null,
+) {
+  return {
+    today: from && to ? smartTasks(userId, "today", from, to).length : 0,
+    important: smartTasks(userId, "important").length,
+  };
+}
 function checkTaskReferences(
   data: z.infer<typeof taskFields>,
   list: TodoListPlain,

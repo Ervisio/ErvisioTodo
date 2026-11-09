@@ -19,6 +19,10 @@ export type Preferences = {
   useListColors: boolean;
   editorLayout: "panel" | "dialog";
   sidebarCollapsed: boolean;
+  /** How the lists column opens: as a sheet over the tasks, or by pushing them aside. */
+  sidebarMode: "overlay" | "push";
+  /** Dates, counts, avatars and other secondary details next to tasks and lists. */
+  showExtras: boolean;
   view: "list" | "cards";
   sounds: boolean;
 };
@@ -29,7 +33,9 @@ const defaults: Preferences = {
   customThemes: [],
   useListColors: false,
   editorLayout: "panel",
-  sidebarCollapsed: false,
+  sidebarCollapsed: true,
+  sidebarMode: "overlay",
+  showExtras: false,
   view: "list",
   sounds: true,
 };
@@ -85,8 +91,10 @@ export function PreferencesProvider({
               ? ["panel", "dialog"].includes(String(v))
               : k === "view"
                 ? ["list", "cards"].includes(String(v))
-                : ["sidebarCollapsed", "sounds"].includes(k) &&
-                  typeof v === "boolean",
+                : k === "sidebarMode"
+                  ? ["overlay", "push"].includes(String(v))
+                  : ["sidebarCollapsed", "showExtras", "sounds"].includes(k) &&
+                    typeof v === "boolean",
           ),
         ),
       }));

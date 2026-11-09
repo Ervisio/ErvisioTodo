@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0 - 2026-11-09
+
+- New glass interface: AMOLED dark theme with slow blue and violet background spots, a borderless project rail and one acrylic panel for lists and tasks.
+- Lists column collapsed to icons by default; it opens over the tasks or beside them (setting).
+- "Today" and "Important" views across all lists, shown only when they contain tasks.
+- Minimal task rows with an inline composer, a single actions menu, edge-aware tooltips and optional extra details.
+- Settings, account, workspace administration and API docs in one section column; workspace administration moved to /settings/workspace.
+- Self-hosted Figtree and JetBrains Mono fonts replace Manrope.
+
 ## 0.3.3 - 2026-11-05
 
 - Fix Docker update and install scripts being altered by systemd environment expansion: execute private script files instead of passing shell source in ExecStart.

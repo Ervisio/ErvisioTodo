@@ -7,8 +7,10 @@ UI: components/admin/todo/ holds forms, task panes, detail panels, tags and Shar
 Task rows: TaskItem never expands children inline. Rows with subtasks show a .sub-summary button that calls onTaskClick, which opens the docked TaskDetailPanel (subtask checklist, onOpenTask to walk the tree). TodoApp selectedTaskId drives the row highlight through ListTaskPane selectedId.
 Shared actions: components/admin/todo/taskActions.ts (useTaskActions: complete, reopen, remove, revalidate, removeFromLists; useSubtasks: open and completed children) is used by TaskItem and TaskDetailPanel. Reuse it instead of duplicating fetch or SWR mutate logic.
 Overflow menu: components/ui/OverflowMenu.tsx renders TodoApp's "Altre azioni" groups (tag, list and project actions).
-Search: the sidebar input in TodoApp sets query state, which ListTaskPane sends as ?q= to /api/admin/todo/tasks. There is no header search and no window event; do not reintroduce ervisio:search.
-Creation: the per-project "+" in the sidebar calls TodoApp newList(projectId).
+Search: opened from the "…" menu or Ctrl/Cmd+K as a field in the slab header; TodoApp query state goes to ListTaskPane as ?q=. No window event; do not reintroduce ervisio:search.
+Smart views: lib/server/todo.ts smartTasks/smartCounts. GET /api/admin/todo/tasks/smart?from&to returns {today, important}; GET /api/admin/todo/tasks?smart=today|important[&from&to] returns open tasks across visible lists (any depth). The client sends its local day as from/to. "Oggi"/"Importanti" render only when their count > 0 (SmartTaskPane) and TodoApp leaves an emptied view.
+Creation: TaskComposer (list view) posts {listId,title} on Enter; its side button (aria "Nuova task") opens TaskDetailModal. Cards keep ListTaskPane's add row (showAdd).
+Lists column "Nuova lista" calls TodoApp newList() for the current context.
 Invariants:
 
 - TodoApp selectedProjectId is tri-state: undefined means overview, null means standalone lists, string means one project. Route initialization waits for lists.

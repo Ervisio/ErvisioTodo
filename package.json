@@ -1,6 +1,6 @@
 {
   "name": "ervisio-todo",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "private": true,
   "description": "ErvisioTodo — standalone task management extracted from FusionHub",
   "engines": {

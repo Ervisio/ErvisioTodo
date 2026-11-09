@@ -1,5 +1,5 @@
 import { pageUser } from "@/lib/server/page";
-import { AppHeader } from "@/components/AppHeader";
+import { SettingsShell } from "@/components/shell/SettingsShell";
 import { TokenManager } from "@/components/TokenManager";
 import { AccountForm } from "@/components/AccountForm";
 import { availableProviders, canonicalUrl } from "@/lib/server/config";
@@ -17,20 +17,21 @@ export default async function Account() {
       .all(user.id) as { provider: string }[]
   ).map((x) => x.provider);
   return (
-    <>
-      <AppHeader name={user.username} role={user.role} />
-      <main className="settings-page">
-        <h1>Il tuo account</h1>
-        <p>Gestisci il profilo e i metodi di accesso.</p>
-        <AccountForm
-          providers={availableProviders()}
-          connected={connected}
-          hasPassword={!!user.password}
-          username={user.username}
-          email={user.email}
-        />
-        <TokenManager admin={user.role === "admin"} />
-      </main>
-    </>
+    <SettingsShell
+      userName={user.username}
+      admin={user.role === "admin"}
+      active="account"
+      title="Il tuo account"
+      description="Profilo, accesso e token personali."
+    >
+      <AccountForm
+        providers={availableProviders()}
+        connected={connected}
+        hasPassword={!!user.password}
+        username={user.username}
+        email={user.email}
+      />
+      <TokenManager admin={user.role === "admin"} />
+    </SettingsShell>
   );
 }

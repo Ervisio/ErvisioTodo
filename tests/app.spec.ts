@@ -17,6 +17,14 @@ async function register(context: APIRequestContext, username: string) {
   });
   expect(r.status()).toBe(201);
 }
+/** Lista/Schede now lives in the single "…" menu as a switch. */
+async function toggleCards(page: import("@playwright/test").Page) {
+  await page.getByRole("button", { name: "Altre azioni", exact: true }).click();
+  await page
+    .getByRole("menuitemcheckbox", { name: "Schede", exact: true })
+    .click();
+  await page.keyboard.press("Escape");
+}
 async function login(
   context: APIRequestContext,
   username: string,
@@ -166,7 +174,7 @@ test("registration, login, complete task workflow, permissions, recovery and mob
   // The subtask summary opens the detail panel, where subtasks form a checklist.
   await page
     .locator(`[data-task-row="${task._id}"]`)
-    .getByRole("button", { name: /sottoattività/ })
+    .getByRole("button", { name: /^\d+\/\d+ sottoattività$/ })
     .click();
   const detail = page.getByRole("complementary", {
     name: "Dettaglio attività",
@@ -419,7 +427,7 @@ test("registration, login, complete task workflow, permissions, recovery and mob
     "PATCH",
   );
   await page.reload();
-  await page.getByRole("button", { name: "Schede", exact: true }).click();
+  await toggleCards(page);
   await expect(page.locator(".list-card")).toHaveCount(1);
   await expect(
     page.getByText("Preparare il rilascio standalone", { exact: true }),
@@ -453,19 +461,13 @@ test("registration, login, complete task workflow, permissions, recovery and mob
   }
   await page.reload();
   await expect(page.locator(".list-card")).toHaveCount(3);
-  await page
-    .getByRole("button", { name: "Riduci barra laterale", exact: true })
-    .click();
-  const projectIcon = page.getByRole("button", {
-    name: "Rilascio Ervisio",
-    exact: true,
-  });
+  // Projects live in the rail as icons; their names appear as tooltips.
+  const projectIcon = page
+    .getByRole("navigation", { name: "Progetti" })
+    .getByRole("button", { name: "Rilascio Ervisio", exact: true });
   await projectIcon.hover();
   await expect(page.getByRole("tooltip")).toContainText("Rilascio Ervisio");
-  await page
-    .getByRole("button", { name: "Espandi barra laterale", exact: true })
-    .click();
-  await page.getByRole("button", { name: "Lista", exact: true }).click();
+  await toggleCards(page);
   await page.screenshot({
     path: "docs/screenshots/projects-desktop.png",
     fullPage: true,
@@ -544,7 +546,8 @@ test("registration, login, complete task workflow, permissions, recovery and mob
     { sharingEnabled: true, maxFilesPerUpload: 0 },
     "PATCH",
   );
-  await page.goto("/settings");
+  // Workspace administration lives in its own settings section.
+  await page.goto("/settings/workspace");
   await page.getByRole("button", { name: "Generali", exact: true }).click();
   const saveSettings = page.getByRole("button", {
     name: "Salva impostazioni",
@@ -593,13 +596,16 @@ test("registration, login, complete task workflow, permissions, recovery and mob
     path: "docs/screenshots/settings-limits.png",
     fullPage: true,
   });
+  await page.goto("/settings");
   await page.getByLabel("Lingua", { exact: true }).selectOption("en");
+  await page.goto("/settings/workspace");
   await expect(
     page.getByRole("button", { name: "General", exact: true }),
   ).toBeVisible();
+  await page.goto("/settings");
   await page.getByLabel("Language", { exact: true }).selectOption("it");
   await page.goto(`/p/${projectData.slug}`);
-  await page.getByRole("button", { name: "Schede", exact: true }).click();
+  await toggleCards(page);
   await page.screenshot({
     path: "docs/screenshots/projects-cards.png",
     fullPage: true,
@@ -921,35 +927,28 @@ test("themes stay consistent across lists, navigation and reload; custom themes 
   async function colors() {
     return page.evaluate(() => {
       const style = getComputedStyle(document.documentElement),
-        surface = document.querySelector(".task-surface")!,
-        selector = document
-          .querySelector(".view-selector")!
-          .getBoundingClientRect(),
-        row = document
-          .querySelector(".workspace-view-row")!
-          .getBoundingClientRect();
+        surface = document.querySelector(".task-surface")!;
       return {
         sheet: style.getPropertyValue("--sheet").trim(),
         surface: getComputedStyle(surface).backgroundColor,
         fg: getComputedStyle(surface).color,
         accent: style.getPropertyValue("--accent").trim(),
-        right: row.right - selector.right,
         selected: getComputedStyle(
-          document.querySelector(".sidebar-list.active")!,
+          document.querySelector(".lists-item.active")!,
         ).backgroundColor,
         palette: document.documentElement.dataset.palette,
       };
     });
   }
+  // Tasks sit directly on the glass slab unless list colors are enabled.
   expect(await colors()).toMatchObject({
     sheet: "#ffffff",
-    surface: "rgb(255, 255, 255)",
+    surface: "rgba(0, 0, 0, 0)",
     accent: "#245ac2",
   });
   expect((await colors()).selected).not.toBe("rgba(0, 0, 0, 0)");
-  expect((await colors()).right).toBeLessThan(2);
   for (const [id, sheet] of [
-    ["dark", "#202631"],
+    ["dark", "#121219"],
     ["amoled", "#000000"],
     ["tokyo-night", "#1a1b26"],
     ["github-dark", "#0d1117"],
@@ -1018,7 +1017,7 @@ test("themes stay consistent across lists, navigation and reload; custom themes 
   ).toBeVisible();
   expect(await colors()).toMatchObject({
     sheet: "#0d1b2a",
-    surface: "rgb(13, 27, 42)",
+    surface: "rgba(0, 0, 0, 0)",
     accent: "#00d4ff",
     palette: customId,
   });
@@ -1032,11 +1031,17 @@ test("themes stay consistent across lists, navigation and reload; custom themes 
     name: /Dettaglio attività/,
   });
   await expect(detail).toBeVisible();
+  // The detail is translucent glass tinted by the theme sheet.
   expect(
-    await detail.evaluate(
-      (element) => getComputedStyle(element).backgroundColor,
-    ),
-  ).toBe("rgb(7, 17, 31)");
+    await detail.evaluate((element) => {
+      const probe = document.createElement("i");
+      probe.style.color = "color-mix(in srgb, #0d1b2a 62%, transparent)";
+      document.body.append(probe);
+      const expected = getComputedStyle(probe).color;
+      probe.remove();
+      return getComputedStyle(element).backgroundColor === expected;
+    }),
+  ).toBe(true);
   await detail.getByRole("button", { name: "Chiudi", exact: true }).click();
   await page.goto("/settings");
   await page
@@ -1093,19 +1098,22 @@ test("overview and favorites selection, theme background, and custom list color 
     })
   ).json();
   expect(created.data.backgroundColor).toBe("");
+  await write(page.request, "/api/admin/todo/tasks", {
+    listId: created.data._id,
+    title: "Attività importante",
+    isFavorite: true,
+  });
   await page.goto("/settings");
   await page.getByLabel("Tema", { exact: true }).selectOption("dark");
   await page.getByLabel("Usa i colori delle liste", { exact: true }).check();
   await page.goto("/l/aspetto-lista");
-  const navigation = page.getByRole("complementary", { name: "Navigazione" });
-  const overview = navigation.getByRole("button", {
-    name: "Panoramica",
-    exact: true,
-  });
-  const favorites = navigation.getByRole("button", {
-    name: "Preferiti",
-    exact: true,
-  });
+  // Overview is the logo in the project rail; "Importanti" appears only when a task is starred.
+  const overview = page
+    .getByRole("navigation", { name: "Progetti" })
+    .getByRole("button", { name: "Panoramica", exact: true });
+  const favorites = page
+    .getByRole("complementary", { name: "Navigazione" })
+    .getByRole("button", { name: "Importanti", exact: true });
   await overview.click();
   await expect(overview).toHaveAttribute("aria-current", "page");
   await favorites.click();
@@ -1116,7 +1124,7 @@ test("overview and favorites selection, theme background, and custom list color 
   await expect(favorites).not.toHaveAttribute("aria-current", "page");
   await expect(page.locator(".task-surface").first()).toHaveCSS(
     "background-color",
-    "rgb(32, 38, 49)",
+    "rgba(0, 0, 0, 0)",
   );
   await page.getByRole("button", { name: "Altre azioni", exact: true }).click();
   await page

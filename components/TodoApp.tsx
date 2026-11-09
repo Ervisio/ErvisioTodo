@@ -2,24 +2,20 @@
 import {
   useState,
   useEffect,
-  useLayoutEffect,
+  useMemo,
   useRef,
   type CSSProperties,
 } from "react";
-import { createPortal } from "react-dom";
+import Link from "next/link";
 import useSWR, { useSWRConfig } from "swr";
 import { Icon } from "@/components/ui/Icon";
 import { ListIcon } from "@/components/ui/ListIcon";
 import { OverflowMenu, type MenuGroup } from "@/components/ui/OverflowMenu";
 import {
-  faBars,
   faPlus,
   faFolder,
-  faChevronDown,
   faMagnifyingGlass,
   faStar,
-  faLayerGroup,
-  faList,
   faTableColumns,
   faGear,
   faTrash,
@@ -28,8 +24,12 @@ import {
   faTag,
   faShareNodes,
   faXmark,
-  faHouse,
-  faChevronRight,
+  faSun,
+  faAnglesRight,
+  faListUl,
+  faCircleCheck,
+  faFilter,
+  faEye,
 } from "@fortawesome/free-solid-svg-icons";
 import {
   THEME_PRESETS,
@@ -48,7 +48,10 @@ import { TaskDetailModal } from "./admin/todo/TaskDetailModal";
 import { TaskDetailPanel } from "./admin/todo/TaskDetailPanel";
 import { TagManager } from "./admin/todo/TagManager";
 import { ShareManager } from "./admin/todo/ShareManager";
+import { Rail, ShellBackdrop } from "./shell/Rail";
 import { ListTaskPane } from "./admin/todo/ListTaskPane";
+import { SmartTaskPane } from "./admin/todo/SmartTaskPane";
+import { TaskComposer } from "./admin/todo/TaskComposer";
 import { useSounds } from "@/hooks/useSounds";
 import type {
   TodoProjectPlain,
@@ -56,7 +59,8 @@ import type {
   TodoTaskPlain,
   TodoTagPlain,
 } from "@/types/todo";
-import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+type Smart = "today" | "important";
+type Tab = "active" | "favorites" | "completed";
 function surfaceStyle(
   list: TodoListPlain,
   useListColors: boolean,
@@ -85,16 +89,26 @@ function surfaceStyle(
     "--list-bg": list.backgroundColor,
   } as CSSProperties;
 }
+/** Local calendar day as an ISO range, so "Oggi" follows the viewer's timezone. */
+function todayRange() {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return `from=${encodeURIComponent(start.toISOString())}&to=${encodeURIComponent(end.toISOString())}`;
+}
 export default function TodoApp({
   initialListId,
   initialProjectId,
   boundToHost = false,
   currentUserId,
+  userName = "",
 }: {
   initialListId?: string;
   initialProjectId?: string;
   boundToHost?: boolean;
   currentUserId: string;
+  userName?: string;
 }) {
   const { preferences, setPreference, t } = usePreferences(),
     { playCreated } = useSounds(),
@@ -111,24 +125,26 @@ export default function TodoApp({
     >("/api/admin/todo/projects", dataFetcher),
     { data: config } = useSWR("/api/public", dataFetcher),
     { data: usage } = useSWR("/api/admin/usage", dataFetcher);
+  const day = new Date().toDateString(),
+    range = useMemo(todayRange, [day]),
+    { data: smartCounts } = useSWR<{ today: number; important: number }>(
+      `/api/admin/todo/tasks/smart?${range}`,
+      dataFetcher,
+      { refreshInterval: 30000 },
+    );
   const [selectedListId, setSelectedListId] = useState<string | null>(
       initialListId || null,
     ),
     [selectedProjectId, setSelectedProjectId] = useState<
       string | null | undefined
     >(initialProjectId),
-    [expanded, setExpanded] = useState<Set<string>>(
-      new Set(initialProjectId ? [initialProjectId] : []),
-    ),
+    [smart, setSmart] = useState<Smart | null>(null),
     [mobileOpen, setMobileOpen] = useState(false),
     [listProjectId, setListProjectId] = useState<string | null>(null),
-    [tooltip, setTooltip] = useState<{
-      text: string;
-      x: number;
-      y: number;
-    } | null>(null),
     [query, setQuery] = useState(""),
-    [tab, setTab] = useState<"active" | "favorites" | "completed">("active"),
+    [searchOpen, setSearchOpen] = useState(false),
+    [tagsOpen, setTagsOpen] = useState(false),
+    [tab, setTab] = useState<Tab>("active"),
     [tagIds, setTagIds] = useState<string[]>([]);
   const [listModal, setListModal] = useState(false),
     [editingList, setEditingList] = useState<TodoListPlain | null>(null),
@@ -149,7 +165,9 @@ export default function TodoApp({
     [error, setError] = useState("");
   const initialized = useRef(false),
     searchRef = useRef<HTMLInputElement>(null),
-    collapsed = preferences.sidebarCollapsed && !mobileOpen,
+    listsOpen = mobileOpen || !preferences.sidebarCollapsed,
+    overlay = preferences.sidebarMode === "overlay",
+    extras = preferences.showExtras,
     selectedList = lists.find((list) => list._id === selectedListId) || null,
     selectedProject =
       projects.find(
@@ -167,42 +185,13 @@ export default function TodoApp({
       projects.some(
         (p) => p._id === list.projectId && p.createdBy === currentUserId,
       ),
-    isProjectOwner = selectedProject?.createdBy === currentUserId;
-  const { data: activeTasks } = useSWR<TodoTaskPlain[]>(
-    selectedList
-      ? `/api/admin/todo/tasks?listId=${selectedList._id}&parentTaskId=null`
-      : null,
-    dataFetcher,
-  );
+    isProjectOwner = selectedProject?.createdBy === currentUserId,
+    showToday = !!smartCounts?.today,
+    showImportant = !!smartCounts?.important;
   const { data: tags = [] } = useSWR<TodoTagPlain[]>(
     selectedList ? `/api/admin/todo/tags?listId=${selectedList._id}` : null,
     dataFetcher,
   );
-  const tabsRef = useRef<HTMLDivElement>(null),
-    hasTabs = !isLoading && contextLists.length > 0;
-  useLayoutEffect(() => {
-    const bar = tabsRef.current;
-    if (!bar) return;
-    const place = () => {
-      const active = bar.querySelector<HTMLElement>('[aria-pressed="true"]');
-      if (!active) return;
-      bar.style.setProperty("--pill-x", `${active.offsetLeft}px`);
-      bar.style.setProperty("--pill-w", `${active.offsetWidth}px`);
-    };
-    place();
-    const frame = requestAnimationFrame(() => {
-      bar.dataset.ready = "true";
-    });
-    const observer = new ResizeObserver(place);
-    observer.observe(bar);
-    bar
-      .querySelectorAll("button")
-      .forEach((button) => observer.observe(button));
-    return () => {
-      cancelAnimationFrame(frame);
-      observer.disconnect();
-    };
-  }, [tab, hasTabs]);
   const [detailId, setDetailId] = useState<string | null>(null),
     detailClosing = !selectedTaskId && !!detailId;
   useEffect(() => {
@@ -227,7 +216,6 @@ export default function TodoApp({
     if (initialListId) {
       const list = lists.find((l) => l._id === initialListId);
       setSelectedProjectId(list?.projectId || null);
-      if (list?.projectId) setExpanded(new Set([list.projectId]));
     } else if (initialProjectId) {
       setSelectedListId(
         lists.find((l) => l.projectId === initialProjectId)?._id || null,
@@ -235,28 +223,39 @@ export default function TodoApp({
     } else if (lists.length) {
       setSelectedListId(lists[0]._id);
       setSelectedProjectId(lists[0].projectId || null);
-      if (lists[0].projectId) setExpanded(new Set([lists[0].projectId]));
     }
   }, [lists, isLoading, initialListId, initialProjectId]);
+  // A smart view disappears as soon as it has nothing left to show.
   useEffect(() => {
-    const menu = () => setMobileOpen((current) => !current);
-    window.addEventListener("ervisio:menu", menu);
-    return () => window.removeEventListener("ervisio:menu", menu);
-  }, []);
+    if (
+      (smart === "today" && smartCounts && !smartCounts.today) ||
+      (smart === "important" && smartCounts && !smartCounts.important)
+    )
+      setSmart(null);
+  }, [smart, smartCounts]);
   useEffect(() => {
-    if (!mobileOpen) return;
-    const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMobileOpen(false);
+    const keys = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        if (mobileOpen) setMobileOpen(false);
+        else if (listsOpen && overlay)
+          setPreference({ sidebarCollapsed: true });
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        openSearch();
+      }
     };
-    window.addEventListener("keydown", close);
-    return () => window.removeEventListener("keydown", close);
-  }, [mobileOpen]);
+    window.addEventListener("keydown", keys);
+    return () => window.removeEventListener("keydown", keys);
+  });
   useEffect(() => {
-    setTooltip(null);
-  }, [preferences.sidebarCollapsed, mobileOpen]);
-  useEffect(() => {
-    if (!selectedList && !selectedProject) return;
-    document.title = `${preferences.view === "cards" && selectedProject ? selectedProject.title : selectedList?.title || selectedProject?.title} · ${config?.siteName || "ErvisioTodo"}`;
+    const title = smart
+      ? t(smart === "today" ? "Oggi" : "Importanti")
+      : preferences.view === "cards" && selectedProject
+        ? selectedProject.title
+        : selectedList?.title || selectedProject?.title;
+    if (!title) return;
+    document.title = `${title} · ${config?.siteName || "ErvisioTodo"}`;
     if (selectedList) {
       const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
       if (link) link.href = selectedList.faviconUrl || "/favicon.svg";
@@ -273,37 +272,64 @@ export default function TodoApp({
       window.history.replaceState(null, "", path);
     }
   }, [
+    smart,
     selectedList,
     selectedProject,
     preferences.view,
-    preferences.theme,
     boundToHost,
     config?.siteName,
+    t,
   ]);
+  function closeOverlay() {
+    setMobileOpen(false);
+    if (overlay && !preferences.sidebarCollapsed)
+      setPreference({ sidebarCollapsed: true });
+  }
+  function resetView() {
+    setSelectedTaskId(null);
+    setTab("active");
+    setTagIds([]);
+    setTagsOpen(false);
+  }
+  function selectOverview() {
+    setSmart(null);
+    setSelectedProjectId(undefined);
+    setSelectedListId(lists[0]?._id || null);
+    resetView();
+  }
   function selectProject(project: TodoProjectPlain | null) {
+    setSmart(null);
     setSelectedProjectId(project?._id || null);
     setSelectedListId(
       lists.find((l) => (l.projectId || null) === (project?._id || null))
         ?._id || null,
     );
-    setSelectedTaskId(null);
-    setTagIds([]);
-    setMobileOpen(false);
-    if (project) setExpanded((current) => new Set([...current, project._id]));
+    resetView();
   }
   function selectList(list: TodoListPlain) {
     if (boundToHost && list._id !== initialListId) {
       location.assign(`${config?.canonicalUrl || ""}/l/${list.slug}`);
       return;
     }
+    setSmart(null);
     setSelectedListId(list._id);
-    setSelectedProjectId(list.projectId || null);
+    if (selectedProjectId !== undefined)
+      setSelectedProjectId(list.projectId || null);
+    resetView();
+    closeOverlay();
+  }
+  function selectSmart(view: Smart) {
+    setSmart(view);
     setSelectedTaskId(null);
-    setTab("active");
-    setTagIds([]);
-    setMobileOpen(false);
-    if (list.projectId)
-      setExpanded((current) => new Set([...current, list.projectId!]));
+    closeOverlay();
+  }
+  function openSearch() {
+    setSearchOpen(true);
+    requestAnimationFrame(() => searchRef.current?.focus());
+  }
+  function closeSearch() {
+    setSearchOpen(false);
+    setQuery("");
   }
   function newList(projectId = selectedProjectId ?? null) {
     setEditingList(null);
@@ -337,6 +363,7 @@ export default function TodoApp({
     if (!response.ok) throw new Error(body.error);
     await refreshLists();
     await refreshProjects();
+    setSmart(null);
     setSelectedListId(body.data._id);
     setSelectedProjectId(body.data.projectId || null);
     setListModal(false);
@@ -355,8 +382,8 @@ export default function TodoApp({
       body = await response.json();
     if (!response.ok) throw new Error(body.error);
     await refreshProjects();
+    setSmart(null);
     setSelectedProjectId(body.data._id);
-    setExpanded((current) => new Set([...current, body.data._id]));
     if (!editingProject) setSelectedListId(null);
     setProjectModal(false);
   }
@@ -404,105 +431,89 @@ export default function TodoApp({
       { revalidate: true },
     );
   }
-  function tip(
-    event: React.MouseEvent<HTMLElement> | React.FocusEvent<HTMLElement>,
-    text: string,
-  ) {
-    if (!collapsed) return;
-    const box = event.currentTarget.getBoundingClientRect();
-    setTooltip({ text, x: box.right + 12, y: box.top + 8 });
-  }
-  function nav(
-    label: string,
-    icon: IconDefinition,
-    onClick: () => void,
-    active = false,
-    color?: string,
-  ) {
-    return (
-      <button
-        key={label}
-        className={`nav-item${active ? " active" : ""}`}
-        onClick={onClick}
-        aria-label={label}
-        aria-current={active ? "page" : undefined}
-        onMouseEnter={(e) => tip(e, label)}
-        onMouseLeave={() => setTooltip(null)}
-        onFocus={(e) => tip(e, label)}
-        onBlur={() => setTooltip(null)}
-      >
-        <Icon icon={icon} className="nav-icon" />
-        <span className="nav-label">{label}</span>
-      </button>
-    );
-  }
-  function listPanel(
-    open: boolean,
-    projectId: string | null,
-    items: TodoListPlain[],
-  ) {
-    return (
-      <div className="project-panel" data-open={open} inert={!open}>
-        <div className="project-panel-inner">
-          <div className="project-lists">
-            {items.map((list) => (
-              <button
-                key={list._id}
-                className={`sidebar-list${list._id === selectedListId ? " active" : ""}`}
-                aria-label={list.title}
-                aria-current={list._id === selectedListId ? "page" : undefined}
-                onClick={() => selectList(list)}
-                onMouseEnter={(e) => tip(e, list.title)}
-                onMouseLeave={() => setTooltip(null)}
-                onFocus={(e) => tip(e, list.title)}
-                onBlur={() => setTooltip(null)}
-              >
-                <ListIcon list={list} />
-                <span className="nav-label">{list.title}</span>
-                {!!list.openTaskCount && (
-                  <span className="list-count">{list.openTaskCount}</span>
-                )}
-              </button>
-            ))}
-            <button
-              className="sidebar-list new-list"
-              aria-label={t("Nuova lista")}
-              onClick={() => newList(projectId)}
-              onMouseEnter={(e) => tip(e, t("Nuova lista"))}
-              onMouseLeave={() => setTooltip(null)}
-              onFocus={(e) => tip(e, t("Nuova lista"))}
-              onBlur={() => setTooltip(null)}
-            >
-              <Icon icon={faPlus} />
-              <span className="nav-label">{t("Nuova lista")}</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  const crumbs = [
-    ...(selectedProject
-      ? [selectedProject.title]
-      : selectedProjectId === undefined
-        ? [t("Panoramica")]
-        : []),
-    ...(selectedList ? [selectedList.title] : []),
-  ];
-  const listActions = preferences.view === "list" && !!selectedList,
+  const listView = !smart && preferences.view === "list" && !!selectedList,
     menuGroups: MenuGroup[] = [];
-  if (listActions && selectedList)
+  menuGroups.push({
+    label: t("Vista"),
+    items: [
+      ...(!smart && selectedList
+        ? [
+            {
+              label: t("Cerca"),
+              icon: faMagnifyingGlass,
+              hint: "Ctrl K",
+              onSelect: openSearch,
+            },
+          ]
+        : []),
+      ...(listView
+        ? [
+            {
+              label: t("Solo importanti"),
+              icon: faStar,
+              checked: tab === "favorites",
+              onSelect: () =>
+                setTab(tab === "favorites" ? "active" : "favorites"),
+            },
+            {
+              label: t("Completate"),
+              icon: faCircleCheck,
+              checked: tab === "completed",
+              onSelect: () =>
+                setTab(tab === "completed" ? "active" : "completed"),
+            },
+            ...(tags.length
+              ? [
+                  {
+                    label: t("Filtra per tag"),
+                    icon: faFilter,
+                    checked: tagsOpen || tagIds.length > 0,
+                    onSelect: () => {
+                      if (tagsOpen) setTagIds([]);
+                      setTagsOpen(!tagsOpen);
+                    },
+                  },
+                ]
+              : []),
+          ]
+        : []),
+      ...(!smart && contextLists.length
+        ? [
+            {
+              label: t("Schede"),
+              icon: faTableColumns,
+              checked: preferences.view === "cards",
+              onSelect: () =>
+                setPreference({
+                  view: preferences.view === "cards" ? "list" : "cards",
+                }),
+            },
+          ]
+        : []),
+      {
+        label: t("Informazioni extra"),
+        icon: faEye,
+        checked: extras,
+        onSelect: () => setPreference({ showExtras: !extras }),
+      },
+    ],
+  });
+  if (listView && selectedList)
     menuGroups.push({
       label: `${t("Lista")}: ${selectedList.title}`,
       items: [
-        { label: t("Tag"), icon: faTag, onSelect: () => setTagModal(true) },
         ...(canManage(selectedList)
           ? [
               {
-                label: t("Svuota lista"),
-                icon: faBroom,
-                onSelect: () => setClearList(selectedList),
+                label: t("Link pubblico"),
+                icon: faShareNodes,
+                onSelect: () => setShareListId(selectedList._id),
               },
+            ]
+          : []),
+        { label: t("Tag"), icon: faTag, onSelect: () => setTagModal(true) },
+        ...(canManage(selectedList)
+          ? [
               {
                 label: t("Modifica lista"),
                 icon: faPen,
@@ -510,6 +521,11 @@ export default function TodoApp({
                   setEditingList(selectedList);
                   setListModal(true);
                 },
+              },
+              {
+                label: t("Svuota lista"),
+                icon: faBroom,
+                onSelect: () => setClearList(selectedList),
               },
               {
                 label: t("Elimina lista"),
@@ -521,12 +537,12 @@ export default function TodoApp({
           : []),
       ],
     });
-  if (isProjectOwner && selectedProject)
+  if (!smart && isProjectOwner && selectedProject)
     menuGroups.push({
       label: `${t("Progetto")}: ${selectedProject.title}`,
       items: [
         {
-          label: t("Progetto"),
+          label: t("Modifica progetto"),
           icon: faGear,
           onSelect: () => {
             setEditingProject(selectedProject);
@@ -541,7 +557,7 @@ export default function TodoApp({
         },
       ],
     });
-  const pane = (list: TodoListPlain) => (
+  const pane = (list: TodoListPlain, showAdd: boolean) => (
     <ListTaskPane
       list={list}
       tab={tab}
@@ -551,457 +567,423 @@ export default function TodoApp({
       onEdit={editTask}
       onSelect={setSelectedTaskId}
       selectedId={selectedTaskId}
+      showAdd={showAdd}
     />
   );
+  const contextTitle =
+      selectedProjectId === undefined
+        ? t("Panoramica")
+        : selectedProject?.title || t("Senza progetto"),
+    heading = smart
+      ? t(smart === "today" ? "Oggi" : "Importanti")
+      : preferences.view === "cards"
+        ? contextTitle
+        : selectedList?.title || contextTitle,
+    headingIcon = smart ? (
+      <Icon icon={smart === "today" ? faSun : faStar} />
+    ) : preferences.view === "list" && selectedList ? (
+      <ListIcon list={selectedList} />
+    ) : null,
+    stagger = (index: number) =>
+      ({ "--d": `${(0.08 + index * 0.035).toFixed(3)}s` }) as CSSProperties;
+  let row = 0;
+  const listItem = (
+    key: string,
+    label: string,
+    icon: React.ReactNode,
+    active: boolean,
+    onClick: () => void,
+    options: { color?: string; count?: number; className?: string } = {},
+  ) => (
+    <button
+      key={key}
+      className={`lists-item${active ? " active" : ""}${options.className ? ` ${options.className}` : ""}`}
+      aria-label={label}
+      aria-current={active ? "page" : undefined}
+      data-tip={listsOpen ? undefined : label}
+      data-tip-side="right"
+      style={
+        options.color ? ({ "--c": options.color } as CSSProperties) : undefined
+      }
+      onClick={onClick}
+    >
+      <span className="lists-icon">{icon}</span>
+      <span className="lists-label" style={stagger(++row)}>
+        {label}
+      </span>
+      {extras && !!options.count && (
+        <span className="lists-count" style={stagger(row)}>
+          {options.count}
+        </span>
+      )}
+    </button>
+  );
+  const smartItems = [
+    showToday &&
+      listItem(
+        "today",
+        t("Oggi"),
+        <Icon icon={faSun} />,
+        smart === "today",
+        () => selectSmart("today"),
+        { className: "smart today", count: smartCounts?.today },
+      ),
+    showImportant &&
+      listItem(
+        "important",
+        t("Importanti"),
+        <Icon icon={faStar} />,
+        smart === "important",
+        () => selectSmart("important"),
+        { className: "smart", count: smartCounts?.important },
+      ),
+  ].filter(Boolean);
+  const storage =
+    usage &&
+    `${(usage.total.bytes / 1024 ** 2).toLocaleString(preferences.locale, {
+      maximumFractionDigits: 1,
+    })} MB${usage.quotaGb ? ` / ${usage.quotaGb} GB` : ""}`;
   return (
     <div
-      className={`todo-shell${collapsed ? " sidebar-collapsed" : ""}${mobileOpen ? " menu-open" : ""}`}
+      className="glass-shell"
+      data-lists={listsOpen ? "open" : "closed"}
+      data-lists-mode={preferences.sidebarMode}
+      data-detail={selectedTaskId || detailId ? "open" : undefined}
+      data-mobile-menu={mobileOpen || undefined}
     >
-      {mobileOpen && (
-        <button
-          className="sidebar-backdrop"
-          aria-label={t("Chiudi navigazione")}
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-      <aside
-        className="project-sidebar"
-        aria-label={t("Navigazione")}
-        onScroll={() => setTooltip(null)}
-      >
-        <div className="sidebar-top">
-          <span>{t("Il tuo spazio")}</span>
+      <ShellBackdrop />
+      <Rail
+        userName={userName}
+        active={
+          smart
+            ? null
+            : selectedProjectId === undefined
+              ? { kind: "overview" }
+              : selectedProjectId === null
+                ? { kind: "unassigned" }
+                : { kind: "project", id: selectedProjectId }
+        }
+        settingsTip={
+          extras && storage ? `${t("Impostazioni")} · ${storage}` : undefined
+        }
+        onOverview={selectOverview}
+        onProject={selectProject}
+        onUnassigned={() => selectProject(null)}
+        onNewProject={() => {
+          setEditingProject(null);
+          setProjectModal(true);
+        }}
+      />
+      <section className="slab">
+        {((listsOpen && overlay) || mobileOpen) && (
           <button
-            className="sidebar-toggle"
+            className="lists-scrim"
+            aria-label={t("Chiudi liste")}
+            tabIndex={-1}
+            onClick={closeOverlay}
+          />
+        )}
+        <aside className="lists" aria-label={t("Navigazione")}>
+          <button
+            className="lists-item lists-toggle"
             aria-label={t(
               mobileOpen
                 ? "Chiudi menu"
-                : preferences.sidebarCollapsed
-                  ? "Espandi barra laterale"
-                  : "Riduci barra laterale",
+                : listsOpen
+                  ? "Comprimi liste"
+                  : "Espandi liste",
             )}
-            aria-expanded={!collapsed}
+            aria-expanded={listsOpen}
+            data-tip={listsOpen ? undefined : t("Espandi liste")}
+            data-tip-side="right"
             onClick={() => {
               if (mobileOpen) setMobileOpen(false);
-              else
-                setPreference({
-                  sidebarCollapsed: !preferences.sidebarCollapsed,
-                });
+              else setPreference({ sidebarCollapsed: listsOpen });
             }}
           >
-            <Icon icon={faBars} />
+            <span className="lists-icon">
+              <Icon icon={faAnglesRight} />
+            </span>
+            <span className="lists-label lists-context" style={stagger(0)}>
+              {contextTitle}
+            </span>
           </button>
-        </div>
-        <label
-          className="sidebar-search"
-          onClick={() => {
-            if (!collapsed) return;
-            setPreference({ sidebarCollapsed: false });
-            requestAnimationFrame(() => searchRef.current?.focus());
-          }}
+          {smartItems}
+          {smartItems.length > 0 && <hr className="lists-sep" />}
+          {contextLists.map((list) =>
+            listItem(
+              list._id,
+              list.title,
+              <ListIcon list={list} />,
+              !smart && list._id === selectedListId,
+              () => selectList(list),
+              { color: list.accentColor, count: list.openTaskCount },
+            ),
+          )}
+          {listItem(
+            "new",
+            t("Nuova lista"),
+            <Icon icon={faPlus} />,
+            false,
+            () => newList(),
+            { className: "ghost" },
+          )}
+        </aside>
+        <main
+          className={`slab-main${preferences.view === "cards" && !smart ? " cards-mode" : ""}`}
         >
-          <Icon icon={faMagnifyingGlass} />
-          <input
-            ref={searchRef}
-            type="search"
-            aria-label={t("Cerca nelle attività")}
-            placeholder={t("Cerca nelle attività")}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </label>
-        <div className="sidebar-group">
-          {nav(
-            t("Panoramica"),
-            faHouse,
-            () => {
-              setSelectedProjectId(undefined);
-              setSelectedListId(lists[0]?._id || null);
-              setSelectedTaskId(null);
-              setTab("active");
-              setTagIds([]);
-              setMobileOpen(false);
-            },
-            selectedProjectId === undefined && tab !== "favorites",
-          )}
-          {nav(
-            t("Preferiti"),
-            faStar,
-            () => {
-              setTab("favorites");
-              setSelectedTaskId(null);
-              setMobileOpen(false);
-            },
-            tab === "favorites",
-          )}
-        </div>
-        <div className="sidebar-label-row">
-          <p className="sidebar-label">{t("Progetti")}</p>
-          <button
-            className="icon-button"
-            aria-label={t("Nuovo progetto")}
-            onClick={() => {
-              setEditingProject(null);
-              setProjectModal(true);
-            }}
-          >
-            <Icon icon={faPlus} />
-          </button>
-        </div>
-        <nav className="project-tree">
-          {projects.map((project) => {
-            const open = expanded.has(project._id);
-            return (
-              <div className="project-branch" key={project._id}>
-                <div
-                  className={`project-node${selectedProjectId === project._id ? " selected" : ""}`}
-                >
-                  <button
-                    className="project-select"
-                    aria-label={project.title}
-                    onClick={() => selectProject(project)}
-                    onMouseEnter={(e) => tip(e, project.title)}
-                    onMouseLeave={() => setTooltip(null)}
-                    onFocus={(e) => tip(e, project.title)}
-                    onBlur={() => setTooltip(null)}
-                  >
-                    <span
-                      className="project-custom-icon"
-                      style={{ color: project.color }}
-                    >
-                      <ListIcon
-                        list={{
-                          iconType: project.iconValue.startsWith("fa-")
-                            ? "fontawesome"
-                            : "emoji",
-                          iconValue: project.iconValue,
-                        }}
-                      />
-                    </span>
-                    <span className="nav-label">{project.title}</span>
-                  </button>
-                  <button
-                    className="project-expand"
-                    aria-label={`${t(open ? "Riduci" : "Espandi")} ${project.title}`}
-                    aria-expanded={open}
-                    onClick={() =>
-                      setExpanded((current) => {
-                        const next = new Set(current);
-                        next.has(project._id)
-                          ? next.delete(project._id)
-                          : next.add(project._id);
-                        return next;
-                      })
+          <header className="slab-head">
+            <button
+              className="ghost-icon mobile-lists"
+              aria-label={t("Apri menu")}
+              onClick={() => setMobileOpen(true)}
+            >
+              <Icon icon={faListUl} />
+            </button>
+            <div className="slab-title">
+              <h1>
+                {headingIcon && (
+                  <span
+                    className="title-icon"
+                    style={
+                      smart
+                        ? undefined
+                        : ({
+                            "--c": selectedList?.accentColor,
+                          } as CSSProperties)
                     }
                   >
-                    <Icon icon={faChevronDown} />
-                  </button>
-                </div>
-                {listPanel(
-                  open,
-                  project._id,
-                  lists.filter((list) => list.projectId === project._id),
+                    {headingIcon}
+                  </span>
                 )}
-              </div>
-            );
-          })}
-        </nav>
-        {nav(
-          t("Senza progetto"),
-          faLayerGroup,
-          () => selectProject(null),
-          selectedProjectId === null && (!selectedListId || collapsed),
-        )}
-        {listPanel(
-          selectedProjectId === null,
-          null,
-          lists.filter((list) => !list.projectId),
-        )}
-        <footer className="sidebar-footer">
-          {nav(t("Impostazioni"), faGear, () => location.assign("/settings"))}
-          {usage && (
-            <div className="sidebar-storage">
-              <div className="storage-meter">
-                <i
-                  style={{
-                    width: `${usage.quotaGb ? Math.min(100, (usage.total.bytes / (usage.quotaGb * 1024 ** 3)) * 100) : 0}%`,
+                {heading}
+              </h1>
+              {extras && !smart && (
+                <p>
+                  {contextTitle} · {contextLists.length}{" "}
+                  {t("Liste").toLowerCase()}
+                </p>
+              )}
+            </div>
+            {searchOpen && (
+              <label className="slab-search">
+                <Icon icon={faMagnifyingGlass} />
+                <input
+                  ref={searchRef}
+                  type="search"
+                  value={query}
+                  aria-label={t("Cerca nelle attività")}
+                  placeholder={t("Cerca nelle attività")}
+                  onChange={(event) => setQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      event.stopPropagation();
+                      closeSearch();
+                    }
                   }}
                 />
-              </div>
-              <p>
-                {(usage.total.bytes / 1024 ** 2).toLocaleString(
-                  preferences.locale,
-                  { maximumFractionDigits: 1 },
-                )}{" "}
-                MB {usage.quotaGb ? `/ ${usage.quotaGb} GB` : ""}
-              </p>
-            </div>
-          )}
-        </footer>
-      </aside>
-      <main
-        className={`todo-content${preferences.view === "cards" ? " cards-mode" : ""}`}
-      >
-        <div className="workspace-heading">
-          <div className="workspace-title">
-            {crumbs.length > 0 && (
-              <nav className="workspace-crumb" aria-label={t("Percorso")}>
-                <ol>
-                  {crumbs.map((crumb, index) => (
-                    <li key={index}>
-                      {index > 0 && <Icon icon={faChevronRight} />}
-                      <span
-                        aria-current={
-                          index === crumbs.length - 1 ? "page" : undefined
-                        }
-                      >
-                        {crumb}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              </nav>
-            )}
-            <h1>
-              {selectedProject?.title ||
-                (selectedList ? selectedList.title : t("Il tuo spazio"))}
-            </h1>
-            <p>
-              {selectedProject?.description ||
-                `${contextLists.length} ${t("Liste").toLowerCase()}`}
-            </p>
-          </div>
-          <div className="workspace-main-actions">
-            {listActions && selectedList && canManage(selectedList) && (
-              <button
-                className="icon-button"
-                title={t("Link pubblico")}
-                aria-label={t("Link pubblico")}
-                onClick={() => setShareListId(selectedList._id)}
-              >
-                <Icon icon={faShareNodes} />
-              </button>
-            )}
-            {menuGroups.length > 0 && (
-              <OverflowMenu label={t("Altre azioni")} groups={menuGroups} />
-            )}
-            {listActions && selectedList && (
-              <button
-                className="button"
-                onClick={() => newTask(selectedList._id)}
-              >
-                <Icon icon={faPlus} />
-                {t("Nuova task")}
-              </button>
-            )}
-          </div>
-        </div>
-        {error && (
-          <p className="error px-7" role="alert">
-            {error}
-          </p>
-        )}
-        {isLoading ? (
-          <div className="task-loading m-8" />
-        ) : !contextLists.length ? (
-          <div className="workspace-empty">
-            <Icon icon={faFolder} />
-            <h2>
-              {t(
-                selectedProject
-                  ? "Nessuna lista in questo progetto"
-                  : "Organizza il tuo prossimo progetto",
-              )}
-            </h2>
-            <p>
-              {t(
-                selectedProject
-                  ? "Crea una lista per iniziare a organizzare il lavoro."
-                  : "Crea un progetto e raccogli al suo interno tutte le liste di attività.",
-              )}
-            </p>
-            <button className="button" onClick={() => newList()}>
-              <Icon icon={faPlus} />
-              {t("Nuova lista")}
-            </button>
-          </div>
-        ) : (
-          <>
-            <nav className="workspace-list-tabs" aria-label={t("Liste")}>
-              {contextLists.map((list) => (
                 <button
-                  key={list._id}
-                  aria-current={
-                    selectedListId === list._id ? "page" : undefined
-                  }
-                  onClick={() => selectList(list)}
+                  type="button"
+                  className="ghost-icon"
+                  aria-label={t("Chiudi ricerca")}
+                  data-tip={t("Chiudi ricerca")}
+                  data-tip-side="bottom"
+                  onClick={closeSearch}
                 >
-                  <ListIcon list={list} />
-                  <span>{list.title}</span>
+                  <Icon icon={faXmark} />
+                </button>
+              </label>
+            )}
+            <OverflowMenu
+              label={t("Altre azioni")}
+              groups={menuGroups}
+              className="ghost-icon"
+            />
+          </header>
+          {(tagsOpen || tagIds.length > 0) && listView && tags.length > 0 && (
+            <div className="tag-filter">
+              {tags.map((tag) => (
+                <button
+                  key={tag._id}
+                  aria-pressed={tagIds.includes(tag._id)}
+                  onClick={() =>
+                    setTagIds((current) =>
+                      current.includes(tag._id)
+                        ? current.filter((id) => id !== tag._id)
+                        : [...current, tag._id],
+                    )
+                  }
+                >
+                  <i style={{ background: tag.color }} />
+                  {tag.name}
                 </button>
               ))}
-            </nav>
-            <div className="task-toolbar">
-              <div className="workspace-view-row">
-                <div className="task-tabs" ref={tabsRef}>
-                  <span className="tab-pill" aria-hidden="true" />
-                  {(["active", "favorites", "completed"] as const).map(
-                    (status) => (
-                      <button
-                        key={status}
-                        aria-pressed={tab === status}
-                        onClick={() => setTab(status)}
-                      >
-                        {t(
-                          status === "active"
-                            ? "Attive"
-                            : status === "favorites"
-                              ? "Preferite"
-                              : "Completate",
-                        )}
-                        {status === "active" && activeTasks && (
-                          <small>{activeTasks.length}</small>
-                        )}
-                      </button>
-                    ),
-                  )}
-                </div>
-                <div
-                  className="segmented view-selector"
-                  role="group"
-                  aria-label={t("Vista del progetto")}
-                >
-                  <button
-                    aria-pressed={preferences.view === "list"}
-                    onClick={() => setPreference({ view: "list" })}
-                  >
-                    <Icon icon={faList} />
-                    {t("Lista")}
-                  </button>
-                  <button
-                    aria-pressed={preferences.view === "cards"}
-                    onClick={() => setPreference({ view: "cards" })}
-                  >
-                    <Icon icon={faTableColumns} />
-                    {t("Schede")}
-                  </button>
-                </div>
-              </div>
             </div>
-            {preferences.view === "list" && selectedList && tags.length > 0 && (
-              <div className="tag-filter">
-                {tags.map((tag) => (
-                  <button
-                    key={tag._id}
-                    aria-pressed={tagIds.includes(tag._id)}
-                    onClick={() =>
-                      setTagIds((current) =>
-                        current.includes(tag._id)
-                          ? current.filter((id) => id !== tag._id)
-                          : [...current, tag._id],
-                      )
-                    }
-                  >
-                    <i style={{ background: tag.color }} />
-                    {tag.name}
-                  </button>
-                ))}
-                {tagIds.length > 0 && (
-                  <button
-                    onClick={() => setTagIds([])}
-                    aria-label={t("Rimuovi filtri")}
-                  >
-                    <Icon icon={faXmark} />
-                  </button>
-                )}
+          )}
+          {error && (
+            <p className="error slab-error" role="alert">
+              {error}
+            </p>
+          )}
+          <div className="slab-body">
+            {isLoading ? (
+              <div className="task-loading" />
+            ) : smart ? (
+              <SmartTaskPane
+                view={smart}
+                range={range}
+                lists={lists}
+                onNew={newTask}
+                onEdit={editTask}
+                onSelect={setSelectedTaskId}
+                selectedId={selectedTaskId}
+              />
+            ) : !contextLists.length ? (
+              <div className="workspace-empty">
+                <Icon icon={faFolder} />
+                <h2>
+                  {t(
+                    selectedProject
+                      ? "Nessuna lista in questo progetto"
+                      : "Organizza il tuo prossimo progetto",
+                  )}
+                </h2>
+                <p>
+                  {t(
+                    selectedProject
+                      ? "Crea una lista per iniziare a organizzare il lavoro."
+                      : "Crea un progetto e raccogli al suo interno tutte le liste di attività.",
+                  )}
+                </p>
+                <button className="button" onClick={() => newList()}>
+                  <Icon icon={faPlus} />
+                  {t("Nuova lista")}
+                </button>
               </div>
-            )}
-            <div className="task-workspace">
-              {preferences.view === "list" ? (
-                selectedList ? (
-                  <div
-                    className="task-surface"
-                    style={surfaceStyle(
-                      selectedList,
-                      preferences.useListColors,
-                    )}
+            ) : preferences.view === "list" ? (
+              selectedList ? (
+                <div
+                  className="task-surface"
+                  style={surfaceStyle(selectedList, preferences.useListColors)}
+                >
+                  {pane(selectedList, false)}
+                </div>
+              ) : null
+            ) : (
+              <div className="list-board">
+                {contextLists.map((list) => (
+                  <section
+                    className="list-card task-surface"
+                    key={list._id}
+                    style={surfaceStyle(list, preferences.useListColors)}
                   >
-                    {pane(selectedList)}
-                  </div>
-                ) : null
-              ) : (
-                <div className="list-board">
-                  {contextLists.map((list) => (
-                    <section
-                      className="list-card task-surface"
-                      key={list._id}
-                      style={surfaceStyle(list, preferences.useListColors)}
-                    >
-                      <header>
+                    <header>
+                      <button
+                        className="card-list-title"
+                        onClick={() => {
+                          selectList(list);
+                          setPreference({ view: "list" });
+                        }}
+                      >
+                        <ListIcon list={list} />
+                        <h2>{list.title}</h2>
+                      </button>
+                      <button
+                        className="ghost-icon"
+                        aria-label={`${t("Nuova attività")}: ${list.title}`}
+                        data-tip={t("Nuova attività")}
+                        data-tip-side="bottom"
+                        onClick={() => newTask(list._id)}
+                      >
+                        <Icon icon={faPlus} />
+                      </button>
+                      {canManage(list) && (
                         <button
-                          className="card-list-title"
+                          className="ghost-icon"
+                          aria-label={`${t("Modifica lista")}: ${list.title}`}
+                          data-tip={t("Modifica lista")}
+                          data-tip-side="bottom"
                           onClick={() => {
-                            selectList(list);
-                            setPreference({ view: "list" });
+                            setEditingList(list);
+                            setListModal(true);
                           }}
                         >
-                          <ListIcon list={list} />
-                          <h2>{list.title}</h2>
+                          <Icon icon={faGear} />
                         </button>
-                        <button
-                          className="icon-button"
-                          aria-label={`${t("Nuova attività")}: ${list.title}`}
-                          onClick={() => newTask(list._id)}
-                        >
-                          <Icon icon={faPlus} />
-                        </button>
-                        {canManage(list) && (
-                          <button
-                            className="icon-button"
-                            aria-label={`${t("Modifica lista")}: ${list.title}`}
-                            onClick={() => {
-                              setEditingList(list);
-                              setListModal(true);
-                            }}
-                          >
-                            <Icon icon={faGear} />
-                          </button>
-                        )}
-                      </header>
-                      {pane(list)}
-                    </section>
-                  ))}
-                </div>
-              )}
-              {(selectedTaskId || detailId) && (
-                <div
-                  className="detail-slot"
-                  data-closing={detailClosing || undefined}
-                  onAnimationEnd={(event) => {
-                    if (
-                      detailClosing &&
-                      (event.target as HTMLElement).classList.contains(
-                        "task-detail",
-                      )
-                    )
-                      setDetailId(null);
-                  }}
-                >
-                  <TaskDetailPanel
-                    taskId={(selectedTaskId || detailId)!}
-                    onClose={() => setSelectedTaskId(null)}
-                    onEdit={(task) => {
-                      setSelectedTaskId(null);
-                      editTask(task);
-                    }}
-                    onAddSubtask={(task) => newTask(task.listId, task._id)}
-                    onOpenTask={setSelectedTaskId}
-                  />
-                </div>
-              )}
-            </div>
-          </>
+                      )}
+                    </header>
+                    {pane(list, true)}
+                  </section>
+                ))}
+              </div>
+            )}
+          </div>
+          {listView && selectedList && tab !== "completed" && (
+            <TaskComposer
+              listId={selectedList._id}
+              onDetails={() => newTask(selectedList._id)}
+            />
+          )}
+        </main>
+      </section>
+      {(selectedTaskId || detailId) && (
+        <div
+          className="detail-slot"
+          data-closing={detailClosing || undefined}
+          onAnimationEnd={(event) => {
+            if (
+              detailClosing &&
+              (event.target as HTMLElement).classList.contains("task-detail")
+            )
+              setDetailId(null);
+          }}
+        >
+          <TaskDetailPanel
+            taskId={(selectedTaskId || detailId)!}
+            onClose={() => setSelectedTaskId(null)}
+            onEdit={(task) => {
+              setSelectedTaskId(null);
+              editTask(task);
+            }}
+            onAddSubtask={(task) => newTask(task.listId, task._id)}
+            onOpenTask={setSelectedTaskId}
+          />
+        </div>
+      )}
+      <nav className="mobile-bar" aria-label={t("Navigazione")}>
+        <button
+          className="ghost-icon"
+          aria-label={t("Liste")}
+          onClick={() => setMobileOpen(true)}
+        >
+          <Icon icon={faListUl} />
+        </button>
+        {showToday && (
+          <button
+            className={`ghost-icon${smart === "today" ? " active" : ""}`}
+            aria-label={t("Oggi")}
+            onClick={() => selectSmart("today")}
+          >
+            <Icon icon={faSun} />
+          </button>
         )}
-      </main>
+        {selectedList && !smart && (
+          <button
+            className="ghost-icon"
+            aria-label={t("Cerca")}
+            onClick={openSearch}
+          >
+            <Icon icon={faMagnifyingGlass} />
+          </button>
+        )}
+        <Link
+          href="/settings"
+          className="ghost-icon"
+          aria-label={t("Impostazioni")}
+        >
+          <Icon icon={faGear} />
+        </Link>
+      </nav>
       <AdminModal
         open={listModal}
         title={t(editingList ? "Modifica lista" : "Nuova lista")}
@@ -1088,17 +1070,6 @@ export default function TodoApp({
         onCancel={() => setClearList(null)}
         dangerous
       />
-      {tooltip &&
-        createPortal(
-          <div
-            role="tooltip"
-            className="sidebar-tooltip"
-            style={{ left: tooltip.x, top: tooltip.y }}
-          >
-            {tooltip.text}
-          </div>,
-          document.body,
-        )}
     </div>
   );
 }

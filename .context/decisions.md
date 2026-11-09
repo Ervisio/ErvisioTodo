@@ -9,3 +9,5 @@
 2026-11-04 · Package as Ervisio plugin mirroring ErvisioRepo (unix-socket admin API, Docker-only install) · Same contract as repo plugin; see .context/plugin-contract.md.
 2026-11-04 · Repo and GHCR image public · Registry register workflow and anonymous docker pull need them.
 2026-11-04 · If Pages deploy hangs in Ervisio/plugins Publish, dispatch a fresh run instead of rerunning · Reruns reuse the stuck deployment for the same SHA.
+2026-11-09 · Approved round 005-lists-motion B "Sopra" (glass shell redesign) · Discord + MS To Do mix: AMOLED black with slow blue/violet blurred spots, acrylic slab, borderless project rail, lists column collapsed to icons by default and opening as an overlay sheet (push mode A selectable in settings), one "…" menu in the header, icons with edge-aware tooltips, smart views only when non-empty, extra info only when the user enables it. Supersedes the 2026-11-04 Material direction.
+2026-11-09 · Approved round 006-settings-pages A (sections column) · Settings, account, workspace admin and API docs share one glass sheet with separate URLs; Figtree + JetBrains Mono replace Manrope, self-hosted.

@@ -31,6 +31,8 @@ import {
   caddySnippet,
   enrichTask,
   listMemberIds,
+  smartTasks,
+  smartCounts,
 } from "@/lib/server/todo";
 import { aiGenerate, aiRefactor } from "@/lib/server/ai";
 import {
@@ -238,6 +240,17 @@ async function handle(request: Request, context: Context) {
         if (id === "reorder" && method === "POST") {
           reorderTasks(await jsonBody(request), user.id);
           return success();
+        }
+        if (id === "smart" && method === "GET")
+          return success(smartCounts(user.id, q.get("from"), q.get("to")));
+        if (!id && method === "GET" && q.has("smart")) {
+          const view = q.get("smart");
+          insist(
+            view === "today" || view === "important",
+            400,
+            "Vista non valida",
+          );
+          return success(smartTasks(user.id, view, q.get("from"), q.get("to")));
         }
         if (!id && method === "GET")
           return success(tasksFor(q.get("listId") || "", user.id, q));

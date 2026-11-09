@@ -54,10 +54,14 @@ export function AccountForm({
   }
   return (
     <>
-      <section className="settings-section">
-        <h2>Profilo</h2>
-        <p className="text-white/70">{username}</p>
-        <p className="mt-2 text-sm text-white/50">{email}</p>
+      <section className="settings-section account-profile">
+        <span className="account-avatar" aria-hidden="true">
+          {username.slice(0, 2).toUpperCase()}
+        </span>
+        <div>
+          <h2>{username}</h2>
+          <p>{email}</p>
+        </div>
       </section>
       <section className="settings-section">
         <h2>Account collegati</h2>
@@ -67,8 +71,15 @@ export function AccountForm({
           cognito: "AWS Cognito",
         }).map(([id, name]) => (
           <div key={id} className="settings-row">
-            <div>
-              <span>{name}</span>
+            <span
+              className="provider-badge"
+              data-provider={id}
+              aria-hidden="true"
+            >
+              {name.slice(0, 1)}
+            </span>
+            <div className="account-provider">
+              <strong>{name}</strong>
               <p>
                 {connected.includes(id)
                   ? "Collegato al tuo account"
@@ -92,7 +103,7 @@ export function AccountForm({
       {hasPassword && providers.credentials && (
         <section className="settings-section">
           <h2>Cambia password</h2>
-          <form className="space-y-4 max-w-sm" onSubmit={password}>
+          <form className="account-password" onSubmit={password}>
             <label className="field">
               Password attuale
               <input
@@ -113,10 +124,10 @@ export function AccountForm({
                 required
               />
             </label>
-            <p className="text-xs text-white/50">
+            <p className="settings-help">
               Almeno 12 caratteri. Il cambio password chiude le sessioni attive.
             </p>
-            <button disabled={busy} className="button">
+            <button disabled={busy} className="button secondary">
               Aggiorna password
             </button>
           </form>

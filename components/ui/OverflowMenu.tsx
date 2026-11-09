@@ -10,15 +10,29 @@ export type MenuItem = {
   onSelect: () => void;
   danger?: boolean;
   disabled?: boolean;
+  /** Turns the item into a menuitemcheckbox with a switch. */
+  checked?: boolean;
+  /** Keyboard hint shown on the right, e.g. "Ctrl K". */
+  hint?: string;
 };
 export type MenuGroup = { label: string; items: MenuItem[] };
 
 export function OverflowMenu({
   label,
   groups,
+  trigger,
+  className = "icon-button",
+  placement = "below-end",
+  tipSide = "bottom",
 }: {
   label: string;
   groups: MenuGroup[];
+  /** Custom button content; defaults to the ellipsis icon. */
+  trigger?: React.ReactNode;
+  className?: string;
+  /** below-end opens under the button aligned right; right-end opens beside it, growing upwards. */
+  placement?: "below-end" | "right-end";
+  tipSide?: "top" | "bottom" | "left" | "right";
 }) {
   const [open, setOpen] = useState(false),
     wrapper = useRef<HTMLDivElement>(null),
@@ -26,7 +40,9 @@ export function OverflowMenu({
     id = useId();
   const items = () =>
     Array.from(
-      wrapper.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [],
+      wrapper.current?.querySelectorAll<HTMLElement>(
+        '[role="menuitem"], [role="menuitemcheckbox"]',
+      ) ?? [],
     );
   function close(restoreFocus = true) {
     setOpen(false);
@@ -62,9 +78,10 @@ export function OverflowMenu({
     <div className="overflow-wrap" ref={wrapper} onKeyDown={onKeyDown}>
       <button
         ref={button}
-        className="icon-button"
+        className={className}
         aria-label={label}
-        title={label}
+        data-tip={open ? undefined : label}
+        data-tip-side={tipSide}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? id : undefined}
@@ -76,10 +93,16 @@ export function OverflowMenu({
           setOpen(true);
         }}
       >
-        <Icon icon={faEllipsis} />
+        {trigger ?? <Icon icon={faEllipsis} />}
       </button>
       {open && (
-        <div id={id} className="overflow-menu" role="menu" aria-label={label}>
+        <div
+          id={id}
+          className="overflow-menu"
+          data-placement={placement}
+          role="menu"
+          aria-label={label}
+        >
           {groups.map((group, groupIndex) => (
             <div
               role={groups.length > 1 ? "group" : "none"}
@@ -100,18 +123,25 @@ export function OverflowMenu({
               {group.items.map((item) => (
                 <button
                   key={item.label}
-                  role="menuitem"
+                  role={
+                    item.checked === undefined ? "menuitem" : "menuitemcheckbox"
+                  }
+                  aria-checked={item.checked}
                   tabIndex={-1}
                   className={item.danger ? "danger-icon" : undefined}
                   aria-disabled={item.disabled || undefined}
                   onClick={() => {
                     if (item.disabled) return;
-                    close();
+                    if (item.checked === undefined) close();
                     item.onSelect();
                   }}
                 >
                   <Icon icon={item.icon} />
-                  {item.label}
+                  <span className="menu-text">{item.label}</span>
+                  {item.hint && <kbd>{item.hint}</kbd>}
+                  {item.checked !== undefined && (
+                    <span className="menu-switch" aria-hidden="true" />
+                  )}
                 </button>
               ))}
             </div>

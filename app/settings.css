@@ -1,0 +1,493 @@
+/* Settings, account, workspace and API docs inside the glass shell (approved round 006-settings-pages, A).
+   Layout lives here; the existing form components keep their markup and are restyled under .settings-content. */
+
+.glass-shell.settings-shell {
+  grid-template-columns: 56px minmax(0, 1fr);
+}
+.slab.settings-slab {
+  grid-template-columns: 240px minmax(0, 1fr);
+  overflow: hidden;
+}
+
+/* ---------- Section column ---------- */
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 18px 12px;
+  overflow: auto;
+  scrollbar-width: none;
+  border-right: 1px solid rgb(var(--fg) / 0.06);
+}
+.settings-nav-group {
+  margin: 0;
+  padding: 14px 12px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgb(var(--ink-dim));
+}
+.settings-nav-group:first-of-type {
+  padding-top: 2px;
+}
+.settings-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+  width: 100%;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 11px;
+  white-space: nowrap;
+  text-align: left;
+  color: rgb(var(--ink-dim));
+  animation: shell-rise 0.45s var(--ease) both;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+.settings-nav-item svg {
+  width: 16px;
+  height: 16px;
+  color: rgb(var(--ink-dim));
+  transition:
+    transform 0.3s var(--spring),
+    color 0.2s;
+}
+.settings-nav-item:hover {
+  background: var(--hover);
+  color: rgb(var(--fg));
+}
+.settings-nav-item:hover svg {
+  transform: scale(1.12) rotate(-6deg);
+}
+.settings-nav-item.active {
+  background: var(--selected);
+  color: rgb(var(--fg));
+  font-weight: 600;
+}
+.settings-nav-item.active svg {
+  color: var(--accent-ink);
+}
+.settings-nav-item.danger,
+.settings-nav-item.danger svg {
+  color: var(--danger);
+}
+.settings-nav-sep {
+  margin: 10px 12px;
+  border: 0;
+  height: 1px;
+  background: rgb(var(--fg) / 0.07);
+}
+.settings-back {
+  display: none;
+}
+
+/* ---------- Content ---------- */
+.settings-content {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 30px 40px 40px;
+}
+.settings-inner {
+  max-width: 780px;
+}
+.settings-inner > * {
+  animation: shell-rise 0.5s var(--ease) both;
+}
+.settings-inner > :nth-child(2) {
+  animation-delay: 0.05s;
+}
+.settings-inner > :nth-child(3) {
+  animation-delay: 0.1s;
+}
+.settings-inner > :nth-child(4) {
+  animation-delay: 0.15s;
+}
+.settings-inner > :nth-child(n + 5) {
+  animation-delay: 0.2s;
+}
+.settings-head {
+  margin-bottom: 22px;
+}
+.settings-head h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.settings-head > p {
+  margin: 4px 0 0;
+  color: rgb(var(--ink-dim));
+}
+.settings-head.hero {
+  position: relative;
+  overflow: hidden;
+  padding: 26px;
+  border-radius: 22px;
+  border: 1px solid var(--edge);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 22%, transparent),
+    color-mix(in srgb, #8a52f0 12%, transparent)
+  );
+}
+.settings-head.hero::after {
+  content: "";
+  position: absolute;
+  right: -60px;
+  top: -120px;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 60%, #6a4bff);
+  filter: blur(80px);
+  opacity: 0.35;
+  pointer-events: none;
+  animation: orb-b 40s ease-in-out infinite;
+}
+.settings-head.hero > * {
+  position: relative;
+  z-index: 1;
+}
+.settings-head.hero h1 {
+  font-size: 28px;
+}
+.settings-head.hero > p {
+  margin-bottom: 16px;
+  max-width: 560px;
+}
+.api-curl {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgb(0 0 0 / 0.35);
+  border: 1px solid var(--edge);
+  color: #d6d8f0;
+  font-size: 12.5px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+:root[data-theme="light"] .api-curl {
+  background: rgb(20 22 50 / 0.85);
+}
+.api-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ---------- Existing settings components on glass ---------- */
+.settings-content .settings-section {
+  margin: 0 0 14px;
+  padding: 6px 18px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--hover);
+}
+.settings-content .settings-section h2 {
+  margin: 12px 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(var(--ink-dim));
+}
+.settings-content .settings-help {
+  font-size: 12.5px;
+  color: rgb(var(--ink-dim));
+}
+.settings-content .settings-row,
+.settings-content .limit-row {
+  min-height: 60px;
+  padding: 12px 0;
+  gap: 18px;
+  border-bottom-color: rgb(var(--fg) / 0.06);
+}
+.settings-content .settings-row strong,
+.settings-content .limit-row strong {
+  font-size: 14px;
+  font-weight: 500;
+}
+.settings-content .settings-row p,
+.settings-content .limit-row p {
+  font-size: 12.5px;
+  color: rgb(var(--ink-dim));
+  margin-top: 2px;
+}
+.settings-content .settings-row select {
+  min-height: 36px;
+  border-radius: 10px;
+  background: var(--hover);
+  font-size: 13.5px;
+}
+.settings-content .settings-tabs {
+  display: inline-flex;
+  gap: 2px;
+  margin: 0 0 14px;
+  padding: 4px;
+  border: 1px solid rgb(var(--fg) / 0.08);
+  border-radius: 14px;
+  background: var(--hover);
+}
+.settings-content .settings-tabs button {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+.settings-content .settings-tabs button[aria-pressed="true"] {
+  background: var(--glass-hi);
+  color: rgb(var(--fg));
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.2);
+}
+.settings-content .settings-save {
+  position: sticky;
+  bottom: 0;
+  left: auto;
+  right: auto;
+  max-width: none;
+  margin-top: 18px;
+  padding: 10px 10px 10px 18px;
+  border-radius: 16px;
+  border-color: var(--edge);
+  background: var(--glass-hi);
+  -webkit-backdrop-filter: blur(30px);
+  backdrop-filter: blur(30px);
+  box-shadow: 0 20px 50px -20px rgb(0 0 0 / 0.6);
+}
+.settings-content .theme-settings {
+  border-bottom: 0;
+}
+.settings-content .theme-card {
+  border-color: transparent;
+  border-radius: 14px;
+  background: var(--hover);
+  transition:
+    transform 0.3s var(--spring),
+    background-color 0.2s;
+}
+.settings-content .theme-card:hover {
+  transform: translateY(-3px);
+  background: var(--selected);
+}
+.settings-content .theme-card.selected {
+  outline: 0;
+  border-color: var(--accent);
+}
+.settings-content details > summary {
+  cursor: pointer;
+  padding: 12px 0;
+  font-weight: 600;
+  color: rgb(var(--ink-dim));
+}
+
+/* API endpoints as compact rows with coloured method pills */
+.settings-content .settings-toolbar {
+  margin-bottom: 12px;
+}
+.settings-content .api-operations {
+  margin-bottom: 14px;
+  padding: 6px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--hover);
+}
+.settings-content .api-operation {
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+}
+.settings-content .api-operation summary {
+  min-height: 42px;
+  padding: 4px 12px;
+  border-radius: 10px;
+  list-style: none;
+  transition: background-color 0.2s;
+}
+.settings-content .api-operation summary::-webkit-details-marker {
+  display: none;
+}
+.settings-content .api-operation summary:hover,
+.settings-content .api-operation[open] summary {
+  background: var(--hover);
+}
+.settings-content .api-operation summary > span {
+  font-size: 12.5px;
+  color: rgb(var(--ink-dim));
+}
+.settings-content .api-operation > :not(summary) {
+  margin: 8px 12px;
+}
+.settings-content .api-operation pre {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgb(0 0 0 / 0.3);
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.settings-content .api-method {
+  width: auto;
+  min-width: 56px;
+  height: 22px;
+  padding: 0 7px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 6px;
+  font-size: 10.5px;
+  color: var(--m, #6cb6ff);
+  background: color-mix(in srgb, var(--m, #6cb6ff) 15%, transparent);
+}
+.settings-content .api-method.post {
+  --m: #3ddc97;
+}
+.settings-content .api-method.patch {
+  --m: #ffb547;
+}
+.settings-content .api-method.put {
+  --m: #b49cff;
+}
+.settings-content .api-method.delete {
+  --m: #ff6b81;
+}
+:root[data-theme="light"] .settings-content .api-method {
+  --m: #1468c2;
+}
+:root[data-theme="light"] .settings-content .api-method.post {
+  --m: #0f7a50;
+}
+:root[data-theme="light"] .settings-content .api-method.patch {
+  --m: #a85f00;
+}
+:root[data-theme="light"] .settings-content .api-method.put {
+  --m: #6a45d8;
+}
+:root[data-theme="light"] .settings-content .api-method.delete {
+  --m: #c42d4a;
+}
+
+/* ---------- Mobile: sections become a scrolling strip, with a way back to tasks ---------- */
+@media (max-width: 760px) {
+  .glass-shell.settings-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .slab.settings-slab {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    padding-bottom: 0;
+  }
+  .settings-nav {
+    flex-direction: row;
+    gap: 4px;
+    padding: 10px;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid rgb(var(--fg) / 0.06);
+  }
+  .settings-nav-group,
+  .settings-nav-sep {
+    display: none;
+  }
+  .settings-nav-item {
+    width: auto;
+  }
+  .settings-back {
+    display: flex;
+  }
+  .settings-content {
+    padding: 20px 16px 32px;
+  }
+  .settings-head.hero {
+    padding: 20px;
+  }
+}
+
+/* ---------- Account ---------- */
+.settings-content .account-profile {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+}
+.account-avatar {
+  width: 64px;
+  height: 64px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 22px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(
+    140deg,
+    color-mix(in srgb, var(--accent) 85%, #4f63ff),
+    color-mix(in srgb, var(--accent) 60%, #8a4dff)
+  );
+  transition: border-radius 0.3s var(--spring);
+}
+.account-avatar:hover {
+  border-radius: 50%;
+}
+.settings-content .account-profile h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: rgb(var(--fg));
+}
+.account-profile p {
+  margin: 2px 0 0;
+  color: rgb(var(--ink-dim));
+}
+.settings-content .settings-row:has(.provider-badge) {
+  justify-content: flex-start;
+}
+.account-provider {
+  flex: 1;
+  min-width: 0;
+}
+.provider-badge {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  font-weight: 800;
+  color: #fff;
+  background: #6b7280;
+}
+.provider-badge[data-provider="google"] {
+  background: #4c7ef3;
+}
+.provider-badge[data-provider="discord"] {
+  background: #5865f2;
+}
+.provider-badge[data-provider="cognito"] {
+  background: #e0763a;
+}
+.account-password {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding-bottom: 14px;
+}
+.account-password .settings-help,
+.account-password .button {
+  grid-column: 1 / -1;
+}
+.account-password .button {
+  justify-self: end;
+}
+@media (max-width: 760px) {
+  .account-password {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

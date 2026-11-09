@@ -1,7 +1,7 @@
 # Workspace settings and appearance
 
 Purpose: Admin policies, personal themes, initial rendering and capability-driven controls.
-Entry points: app/settings/page.tsx; components/SettingsForm.tsx; components/LimitSettings.tsx; components/ThemeSettings.tsx; components/Preferences.tsx; app/layout.tsx.
+Entry points: app/settings/page.tsx (personal); app/settings/workspace/page.tsx (admin); components/shell/SettingsShell.tsx; components/SettingsForm.tsx; components/LimitSettings.tsx; components/ThemeSettings.tsx; components/Preferences.tsx; app/layout.tsx.
 Flow: admin form → /api/admin/settings → lib/server/settings.ts:saveSettings → SQLite; personal appearance → PreferencesProvider → localStorage and SSR-readable cookies → layout/theme CSS variables.
 Invariants:
 
@@ -9,8 +9,9 @@ Invariants:
 - lib/server/config.ts:publicConfig exposes capabilities, configured limits and available providers without secrets; hooks/useCapabilities.ts supplies UI capabilities.
 - Provider availability combines environment credentials, environment defaults and saved settings; merely enabling a provider is insufficient without credentials.
 - Theme and locale preferences are browser-local, distinct from workspace policies. Initial layout reads cookies to match the client appearance.
-- lib/themes.ts defines presets, themeVariables, validCustomTheme, parseCustomThemes and resolveTheme; validate imported colors and IDs before applying CSS. Light and dark defaults are blue (accent #245ac2 and #adc6ff).
-- Manrope is self-hosted: app/layout.tsx loads app/fonts/manrope-{400,500,600}.ttf with next/font/local as --font-manrope on <html>, and globals.css uses it first. Do not add a Google Fonts link.
+- lib/themes.ts defines presets, themeVariables, validCustomTheme, parseCustomThemes and resolveTheme; validate imported colors and IDs before applying CSS. Light default accent #245ac2; dark default is AMOLED (canvas #000, sheet #121219, accent #9ea8ff), mirrored in globals.css :root[data-theme=dark] and the prefers-color-scheme fallback.
+- Fonts are self-hosted variable files: app/layout.tsx loads app/fonts/figtree-var.ttf (--font-sans) and jetbrains-mono-var.ttf (--font-mono) with next/font/local. Do not add a Google Fonts link.
+- Shell preferences (Preferences.tsx, localStorage): sidebarCollapsed (default true = lists column shows icons), sidebarMode overlay|push (default overlay, chosen in ThemeSettings), showExtras (default false; also toggled from the list "…" menu) gates dates, counts, assignees, list subtitles and storage.
 - List colors are an explicit appearance opt-in; preserve this when changing list branding or theme precedence.
 - A list backgroundColor of "" inherits the personal theme when list colors are enabled; a valid HEX value is an explicit override. The list accent still applies with an inherited background.
 - Project and list branding use the shared components/ColorInput picker, including hex entry and preset swatches; avoid native color inputs that diverge across browsers.

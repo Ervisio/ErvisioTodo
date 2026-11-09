@@ -17,15 +17,22 @@ import {
   type Preferences,
 } from "@/components/Preferences";
 import { Toasts } from "@/components/Toasts";
+import { TipLayer } from "@/components/ui/TipLayer";
 import localFont from "next/font/local";
 import "./globals.css";
-const manrope = localFont({
-  src: [
-    { path: "./fonts/manrope-400.ttf", weight: "400" },
-    { path: "./fonts/manrope-500.ttf", weight: "500" },
-    { path: "./fonts/manrope-600.ttf", weight: "600" },
-  ],
-  variable: "--font-manrope",
+import "./shell.css";
+import "./settings.css";
+// Figtree (UI) and JetBrains Mono (code) are self-hosted variable fonts, as in the approved mockups.
+const figtree = localFont({
+  src: "./fonts/figtree-var.ttf",
+  weight: "300 900",
+  variable: "--font-sans",
+  display: "swap",
+});
+const mono = localFont({
+  src: "./fonts/jetbrains-mono-var.ttf",
+  weight: "100 800",
+  variable: "--font-mono",
   display: "swap",
 });
 export const dynamic = "force-dynamic";
@@ -69,7 +76,7 @@ export default async function RootLayout({
   return (
     <html
       lang={locale}
-      className={manrope.variable}
+      className={`${figtree.variable} ${mono.variable}`}
       data-theme={
         theme === "system"
           ? undefined
@@ -104,6 +111,7 @@ export default async function RootLayout({
         >
           {children}
           <Toasts />
+          <TipLayer />
         </PreferencesProvider>
       </body>
     </html>

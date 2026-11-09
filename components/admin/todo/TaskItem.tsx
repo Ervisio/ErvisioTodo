@@ -11,16 +11,14 @@ import { CSS } from "@dnd-kit/utilities";
 import { Icon } from "@/components/ui/Icon";
 import {
   faCheck,
-  faChevronRight,
   faStar,
   faTrash,
   faPen,
   faPlus,
-  faClock,
-  faExclamationTriangle,
+  faCalendarDay,
+  faListCheck,
   faPaperclip,
   faGripVertical,
-  faListUl,
   faWandMagicSparkles,
 } from "@fortawesome/free-solid-svg-icons";
 import { faStar as faStarOutline } from "@fortawesome/free-regular-svg-icons";
@@ -29,17 +27,18 @@ import { useTaskActions } from "./taskActions";
 
 function formatDue(
   iso: string | null,
-): { label: string; overdue: boolean } | null {
+  locale: string,
+): { label: string; overdue: boolean; today: boolean } | null {
   if (!iso) return null;
-  const d = new Date(iso);
-  const overdue = d < new Date();
+  const d = new Date(iso),
+    start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
   return {
-    label: d.toLocaleDateString("it-IT", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }),
-    overdue,
+    label: d.toLocaleDateString(locale, { day: "numeric", month: "short" }),
+    overdue: d < start,
+    today: d >= start && d < end,
   };
 }
 
@@ -62,6 +61,10 @@ interface Props {
   onTaskClick: (taskId: string) => void;
   /** Map of tag _id → tag info, for rendering tag badges */
   tagMap?: Record<string, TodoTagPlain>;
+  /** Position in the list, used to stagger the entrance animation. */
+  index?: number;
+  /** Shown as an extra when tasks from several lists are mixed (smart views). */
+  listTitle?: string;
 }
 
 export function TaskItem({
@@ -71,9 +74,12 @@ export function TaskItem({
   onAddChild,
   onTaskClick,
   tagMap,
+  index = 0,
+  listTitle,
 }: Props) {
   const { aiEnabled } = useCapabilities(),
-    { t } = usePreferences();
+    { t, preferences } = usePreferences(),
+    showExtras = preferences.showExtras;
   const [completing, setCompleting] = useState(false);
   const [togglingFav, setTogglingFav] = useState(false);
   const [isRefactoring, setIsRefactoring] = useState(false);
@@ -102,7 +108,7 @@ export function TaskItem({
   const subtaskTotal = task.subtaskCount ?? 0,
     subtaskDone = task.subtaskDoneCount ?? 0,
     hasChildren = subtaskTotal > 0,
-    due = formatDue(task.dueDate);
+    due = formatDue(task.dueDate, preferences.locale);
 
   async function handleComplete(e: React.MouseEvent) {
     e.stopPropagation();
@@ -162,7 +168,11 @@ export function TaskItem({
   }
 
   return (
-    <div ref={setNodeRef} style={dragStyle}>
+    <div
+      ref={setNodeRef}
+      style={{ ...dragStyle, "--n": index } as React.CSSProperties}
+      className="task-enter"
+    >
       <div
         data-task-row={task._id}
         className={`task-row${selected ? " selected" : ""}`}
@@ -172,7 +182,7 @@ export function TaskItem({
           type="button"
           className="drag-handle"
           onClick={(e) => e.stopPropagation()}
-          title="Trascina per riordinare"
+          aria-label={t("Trascina per riordinare")}
           {...attributes}
           {...listeners}
         >
@@ -187,9 +197,12 @@ export function TaskItem({
           role="checkbox"
           aria-checked={completing}
           aria-label={task.title}
-          title={t("Segna come completato")}
+          data-tip={t("Segna come completato")}
+          data-tip-side="right"
         >
-          <span>{completing && <Icon icon={faCheck} />}</span>
+          <span>
+            <Icon icon={faCheck} />
+          </span>
         </button>
 
         <div className="task-copy">
@@ -203,65 +216,45 @@ export function TaskItem({
           >
             {task.title}
           </button>
-          {!!(
-            hasChildren ||
-            due ||
-            task.attachments.length ||
-            task.tags.length ||
-            task.assignedToUsers?.length
-          ) && (
-            <div className="task-subtitle">
-              {hasChildren && (
-                <button
-                  type="button"
-                  className={`sub-summary${subtaskDone === subtaskTotal ? " done" : ""}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onTaskClick(task._id);
-                  }}
-                >
-                  <Icon icon={faListUl} />
-                  <span>
-                    {subtaskTotal} {t("sottoattività")}
+          {showExtras &&
+            !!(
+              listTitle ||
+              due ||
+              task.attachments.length ||
+              task.tags.length ||
+              task.assignedToUsers?.length
+            ) && (
+              <div className="task-subtitle">
+                {listTitle && <span className="task-chip">{listTitle}</span>}
+                {due && (
+                  <span className={`task-chip${due.overdue ? " overdue" : ""}`}>
+                    {due.label}
                   </span>
-                  <span className="progress-count">
-                    {subtaskDone}/{subtaskTotal}
+                )}
+                {task.attachments.length > 0 && (
+                  <span className="task-chip">
+                    <Icon icon={faPaperclip} />
+                    {task.attachments.length}
                   </span>
-                  <span className="summary-chevron">
-                    <Icon icon={faChevronRight} />
+                )}
+                {tagMap &&
+                  task.tags?.map((tagId) => {
+                    const tag = tagMap[tagId];
+                    if (!tag) return null;
+                    return (
+                      <span key={tagId} className="tag">
+                        <i style={{ background: tag.color }} />
+                        {tag.name}
+                      </span>
+                    );
+                  })}
+                {task.assignedToUsers?.map((u) => (
+                  <span key={u._id} className="tag">
+                    {displayUser(u)}
                   </span>
-                </button>
-              )}
-              {due && (
-                <span className={`task-chip${due.overdue ? " overdue" : ""}`}>
-                  <Icon icon={due.overdue ? faExclamationTriangle : faClock} />
-                  {due.label}
-                </span>
-              )}
-              {task.attachments.length > 0 && (
-                <span className="task-chip">
-                  <Icon icon={faPaperclip} />
-                  {task.attachments.length}
-                </span>
-              )}
-              {tagMap &&
-                task.tags?.map((tagId) => {
-                  const tag = tagMap[tagId];
-                  if (!tag) return null;
-                  return (
-                    <span key={tagId} className="tag">
-                      <i style={{ background: tag.color }} />
-                      {tag.name}
-                    </span>
-                  );
-                })}
-              {task.assignedToUsers?.map((u) => (
-                <span key={u._id} className="tag">
-                  {displayUser(u)}
-                </span>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
         </div>
 
         <div className="row-end">
@@ -273,7 +266,9 @@ export function TaskItem({
                 e.stopPropagation();
                 onAddChild(task._id);
               }}
-              title="Aggiungi sottotask"
+              aria-label={t("Aggiungi sottoattività")}
+              data-tip={t("Aggiungi sottoattività")}
+              data-tip-side="left"
             >
               <Icon icon={faPlus} />
             </button>
@@ -284,7 +279,9 @@ export function TaskItem({
                 e.stopPropagation();
                 onEdit(task);
               }}
-              title="Modifica"
+              aria-label={t("Modifica")}
+              data-tip={t("Modifica")}
+              data-tip-side="left"
             >
               <Icon icon={faPen} />
             </button>
@@ -297,7 +294,9 @@ export function TaskItem({
                 setIsRefactorModalOpen(true);
               }}
               disabled={isRefactoring}
-              title="Refactor AI"
+              aria-label="Refactor AI"
+              data-tip="Refactor AI"
+              data-tip-side="left"
             >
               <Icon
                 icon={faWandMagicSparkles}
@@ -308,11 +307,37 @@ export function TaskItem({
               type="button"
               className="row-button danger-icon"
               onClick={handleDelete}
-              title="Elimina"
+              aria-label={t("Elimina")}
+              data-tip={t("Elimina")}
+              data-tip-side="left"
             >
               <Icon icon={faTrash} />
             </button>
           </div>
+          {due && (due.today || due.overdue) && (
+            <span
+              className="row-indicator late"
+              data-tip={t(due.overdue ? "Scaduta" : "Scade oggi")}
+              data-tip-side="left"
+            >
+              <Icon icon={faCalendarDay} />
+            </span>
+          )}
+          {hasChildren && (
+            <button
+              type="button"
+              className={`sub-summary row-indicator${subtaskDone === subtaskTotal ? " done" : ""}`}
+              aria-label={`${subtaskDone}/${subtaskTotal} ${t("sottoattività")}`}
+              data-tip={`${subtaskDone} ${t("di")} ${subtaskTotal} ${t("sottoattività")}`}
+              data-tip-side="left"
+              onClick={(e) => {
+                e.stopPropagation();
+                onTaskClick(task._id);
+              }}
+            >
+              <Icon icon={faListCheck} />
+            </button>
+          )}
           <button
             type="button"
             className="row-button favorite"
@@ -320,11 +345,12 @@ export function TaskItem({
             disabled={togglingFav}
             aria-pressed={task.isFavorite}
             aria-label={t("Preferita")}
-            title={t(
+            data-tip={t(
               task.isFavorite
-                ? "Rimuovi dai preferiti"
-                : "Aggiungi ai preferiti",
+                ? "Rimuovi dagli importanti"
+                : "Segna come importante",
             )}
+            data-tip-side="left"
           >
             <Icon icon={task.isFavorite ? faStar : faStarOutline} />
           </button>
@@ -337,17 +363,17 @@ export function TaskItem({
           onClose={() => setIsRefactorModalOpen(false)}
           size="md"
         >
-          <div className="space-y-4 text-sm text-white/80">
+          <div className="space-y-4 text-sm">
             <p>
               Vuoi eseguire un refactor AI di titolo e descrizione per il task
-              &quot;<strong className="text-white">{task.title}</strong>&quot;?
+              &quot;<strong>{task.title}</strong>&quot;?
             </p>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={generateSubtasks}
                 onChange={(e) => setGenerateSubtasks(e.target.checked)}
-                className="rounded border-white/20 bg-background/50 accent-blue-500"
+                className="switch"
               />
               <span>Crea subtask se necessario</span>
             </label>
@@ -355,14 +381,14 @@ export function TaskItem({
               <button
                 type="button"
                 onClick={() => setIsRefactorModalOpen(false)}
-                className="rounded-lg border border-white/[0.04] px-4 py-2 text-white hover:bg-white/5 transition"
+                className="button secondary"
               >
                 Annulla
               </button>
               <button
                 type="button"
                 onClick={performRefactorAI}
-                className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-500 transition"
+                className="button"
               >
                 Conferma Refactor
               </button>

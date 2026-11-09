@@ -33,6 +33,7 @@ export function ListTaskPane({
   onEdit,
   onSelect,
   selectedId,
+  showAdd = true,
 }: {
   list: TodoListPlain;
   tab: "active" | "favorites" | "completed";
@@ -42,8 +43,10 @@ export function ListTaskPane({
   onEdit: (task: TodoTaskPlain) => void;
   onSelect: (id: string) => void;
   selectedId: string | null;
+  /** The list view has its own composer; cards keep the inline add row. */
+  showAdd?: boolean;
 }) {
-  const { t } = usePreferences(),
+  const { t, preferences } = usePreferences(),
     { revalidate } = useTaskActions(),
     [ordered, setOrdered] = useState<TodoTaskPlain[] | null>(null),
     sensors = useSensors(
@@ -98,10 +101,12 @@ export function ListTaskPane({
         <div className="task-loading" aria-label={t("Caricamento…")} />
       ) : tasks?.length ? (
         <>
-          <p className="task-section-label">
-            {t(tab === "favorites" ? "Preferite" : "Da completare")}
-            <span>{tasks.length}</span>
-          </p>
+          {preferences.showExtras && (
+            <p className="task-section-label">
+              {t(tab === "favorites" ? "Preferite" : "Da completare")}
+              <span>{tasks.length}</span>
+            </p>
+          )}
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -111,7 +116,7 @@ export function ListTaskPane({
               items={(ordered || tasks).map((t) => t._id)}
               strategy={verticalListSortingStrategy}
             >
-              {(ordered || tasks).map((task) => (
+              {(ordered || tasks).map((task, index) => (
                 <TaskItem
                   key={task._id}
                   task={task}
@@ -120,6 +125,7 @@ export function ListTaskPane({
                   onAddChild={(parent) => onNew(list._id, parent)}
                   onTaskClick={onSelect}
                   tagMap={map}
+                  index={index}
                 />
               ))}
             </SortableContext>
@@ -132,10 +138,12 @@ export function ListTaskPane({
           <span>{t("Controlla i filtri o aggiungi una nuova attività.")}</span>
         </div>
       )}
-      <button className="add-task-row" onClick={() => onNew(list._id)}>
-        <Icon icon={faPlus} />
-        {t("Aggiungi attività")}
-      </button>
+      {showAdd && (
+        <button className="add-task-row" onClick={() => onNew(list._id)}>
+          <Icon icon={faPlus} />
+          {t("Aggiungi attività")}
+        </button>
+      )}
     </section>
   );
 }

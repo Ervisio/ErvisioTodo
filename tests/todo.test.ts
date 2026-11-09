@@ -22,6 +22,8 @@ import {
   enrichTask,
   brandingFor,
   caddySnippet,
+  smartTasks,
+  smartCounts,
 } from "../lib/server/todo";
 import {
   allowedHost,
@@ -209,6 +211,31 @@ test("list and task APIs report open top-level and direct subtask counts", () =>
   assert.equal(enrichTask(stored(a._id)).subtaskCount, 3);
   assert.equal(enrichTask(stored(b._id)).subtaskCount, 0);
   assert.ok(!listsFor(bob).some((x) => x._id === l._id));
+});
+test("smart views count only open tasks the user can see, across lists", () => {
+  const l = list("smart"),
+    day = new Date("2026-03-10T00:00:00.000Z"),
+    from = day.toISOString(),
+    to = new Date(day.getTime() + 86_400_000).toISOString(),
+    add = (title: string, extra: object = {}) =>
+      saveTask({ listId: l._id, title, ...extra }, alice);
+  add("due", { dueDate: "2026-03-10T15:00:00.000Z" });
+  add("tomorrow", { dueDate: "2026-03-11T09:00:00.000Z" });
+  add("star", { isFavorite: true });
+  const done = add("done", {
+    dueDate: "2026-03-10T08:00:00.000Z",
+    isFavorite: true,
+  });
+  setTaskState(done._id, alice, "complete");
+  const mine = (view: "today" | "important") =>
+    smartTasks(alice, view, from, to)
+      .filter((t) => t.listId === l._id)
+      .map((t) => t.title);
+  assert.deepEqual(mine("today"), ["due"]);
+  assert.deepEqual(mine("important"), ["star"]);
+  assert.ok(smartCounts(alice, from, to).today >= 1);
+  assert.ok(!smartTasks(bob, "important").some((t) => t.listId === l._id));
+  assert.throws(() => smartTasks(alice, "today", to, from));
 });
 test("reordering is atomic when any ID is inaccessible, and cannot cross lists", () => {
   const a = list("reorder-a"),

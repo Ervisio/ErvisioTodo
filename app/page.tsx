@@ -1,5 +1,4 @@
 import TodoApp from "@/components/TodoApp";
-import { AppHeader } from "@/components/AppHeader";
 import { pageUser } from "@/lib/server/page";
 import { brandingFor, getList } from "@/lib/server/todo";
 import { headers } from "next/headers";
@@ -17,12 +16,12 @@ export default async function Home() {
   }
   return (
     <>
-      <AppHeader name={user.username} role={user.role} />
-      <main className="workspace">
+      <main className="workspace glass-workspace">
         <TodoApp
           initialListId={branding?._id}
           boundToHost={!!branding}
           currentUserId={user.id}
+          userName={user.username}
         />
       </main>
     </>

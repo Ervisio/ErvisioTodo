@@ -1,5 +1,5 @@
 import { pageUser } from "@/lib/server/page";
-import { SettingsShell } from "@/components/shell/SettingsShell";
+import { SettingsHead } from "@/components/shell/SettingsShell";
 import { TokenManager } from "@/components/TokenManager";
 import { AccountForm } from "@/components/AccountForm";
 import { availableProviders, canonicalUrl } from "@/lib/server/config";
@@ -17,10 +17,7 @@ export default async function Account() {
       .all(user.id) as { provider: string }[]
   ).map((x) => x.provider);
   return (
-    <SettingsShell
-      userName={user.username}
-      admin={user.role === "admin"}
-      active="account"
+    <SettingsHead
       title="Il tuo account"
       description="Profilo, accesso e token personali."
     >
@@ -32,6 +29,6 @@ export default async function Account() {
         email={user.email}
       />
       <TokenManager admin={user.role === "admin"} />
-    </SettingsShell>
+    </SettingsHead>
   );
 }

@@ -49,6 +49,14 @@ import {
   pruneActivity,
   recordActivity,
 } from "@/lib/server/settings";
+import {
+  backupConfig,
+  listBackups,
+  restoreBackup,
+  runBackup,
+  saveBackupConfig,
+  testBackupTarget,
+} from "@/lib/server/backups";
 import { tokensFor, createToken, deleteToken } from "@/lib/server/tokens";
 import { sharesFor, createShare, deleteShare } from "@/lib/server/shares";
 import { actorContext } from "@/lib/server/api-policy";
@@ -85,6 +93,33 @@ async function handle(request: Request, context: Context) {
           usage: storageUsage(),
           ...publicConfig(),
         });
+      }
+      if (path[0] === "storage") {
+        insist(user.role === "admin", 403, "Solo amministratori");
+        const action = path[1] ?? "";
+        if (action === "config" && method === "GET")
+          return success(backupConfig());
+        if (action === "config" && method === "PATCH") {
+          saveBackupConfig(await jsonBody(request));
+          recordActivity(user.id, "storage.update");
+          return success(backupConfig());
+        }
+        if (action === "test" && method === "POST") {
+          rateLimit(`storage-test:${user.id}`, 20, 60_000);
+          return success(await testBackupTarget(await jsonBody(request)));
+        }
+        if (action === "backups" && method === "GET")
+          return success(await listBackups());
+        if (action === "backup" && method === "POST")
+          return success({ name: await runBackup(user.id) }, 201);
+        if (action === "restore" && method === "POST") {
+          const body = z
+            .object({ name: z.string().max(120) })
+            .parse(await jsonBody(request));
+          await restoreBackup(body.name, user.id);
+          return success({ restored: body.name });
+        }
+        insist(false, 404, "Risorsa non trovata");
       }
       if (route === "activity" && method === "GET") {
         insist(user.role === "admin", 403, "Solo amministratori");

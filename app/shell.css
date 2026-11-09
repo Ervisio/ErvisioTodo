@@ -233,21 +233,13 @@
   font-weight: 600;
   color: var(--c, rgb(var(--ink-dim)));
   background: var(--hover);
-  animation: shell-pop 0.5s var(--spring) both;
-  animation-delay: calc(var(--n, 0) * 45ms + 120ms);
   transition:
-    border-radius 0.28s var(--spring),
     background-color 0.2s,
-    color 0.2s,
-    transform 0.2s var(--ease);
+    color 0.2s;
 }
 .rail-item:hover {
-  border-radius: 13px;
   background: var(--selected);
   color: var(--c, rgb(var(--fg)));
-}
-.rail-item:active {
-  transform: scale(0.94);
 }
 .rail-item.active {
   border-radius: 13px;
@@ -269,9 +261,6 @@
   border-radius: 0 3px 3px 0;
   background: rgb(var(--fg));
   transition: height 0.28s var(--spring);
-}
-.rail-item:hover::before {
-  height: 16px;
 }
 .rail-item.active::before {
   height: 28px;
@@ -437,9 +426,6 @@
   width: 17px !important;
   height: 17px !important;
 }
-.lists-item:hover .lists-icon {
-  transform: scale(1.12) rotate(-6deg);
-}
 .lists-item.smart .lists-icon {
   color: var(--accent-ink);
 }
@@ -577,9 +563,6 @@
   background: var(--hover);
   color: rgb(var(--fg));
 }
-.ghost-icon:active {
-  transform: scale(0.92);
-}
 .mobile-lists {
   display: none;
 }
@@ -702,7 +685,6 @@
 }
 .check-task:hover > span {
   border-color: var(--accent);
-  transform: scale(1.08);
 }
 .check-task:hover > span svg {
   opacity: 1;
@@ -751,15 +733,9 @@
   border-radius: 9px;
 }
 .row-actions .row-button {
-  transform: translateX(6px);
   transition:
-    transform 0.25s var(--ease),
     background 0.2s,
     color 0.2s;
-}
-.task-row:hover .row-actions .row-button,
-.task-row:focus-within .row-actions .row-button {
-  transform: none;
 }
 .row-indicator {
   width: 30px;
@@ -796,7 +772,6 @@
 .task-row .favorite:hover {
   background: none;
   color: var(--accent);
-  transform: scale(1.18) rotate(-12deg);
 }
 .drag-handle {
   left: -10px;
@@ -832,10 +807,6 @@
   color: var(--accent-ink);
   transition: transform 0.4s var(--spring);
 }
-.composer:hover .composer-plus,
-.composer:focus-within .composer-plus {
-  transform: rotate(90deg);
-}
 .composer[data-busy] .composer-plus {
   animation: composer-spin 0.8s linear infinite;
 }
@@ -860,16 +831,13 @@
   width: 32px;
   height: 32px;
   opacity: 0;
-  transform: translateX(6px);
   transition:
     opacity 0.2s,
-    transform 0.3s var(--ease),
     background-color 0.2s;
 }
 .composer:hover .ghost-icon,
 .composer:focus-within .ghost-icon {
   opacity: 1;
-  transform: none;
 }
 
 /* ---------- Menus on glass ---------- */
@@ -1234,5 +1202,110 @@ samp {
   .tip {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+/* ---------- Home (approved Variant Studio round 005-home-focus, B "Per progetto") ---------- */
+.home {
+  max-width: 560px;
+  margin: 3vh auto 0;
+  padding: 0 14px 30px;
+}
+.home h1 {
+  margin: 0 0 6px;
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+.home-sub {
+  margin: 0;
+  color: rgb(var(--ink-dim));
+}
+.home-group {
+  margin-top: 26px;
+}
+.home-group h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(var(--ink-dim));
+}
+.home-group h2 i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c);
+}
+.home-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px;
+  border-radius: 12px;
+}
+.home-row:hover {
+  background: var(--hover);
+}
+.home-title {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 0;
+  text-align: left;
+  color: rgb(var(--fg));
+}
+.home-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 34px;
+  font-size: 13px;
+  color: rgb(var(--ink-dim));
+}
+.home-foot b {
+  color: rgb(var(--fg));
+}
+.home-foot button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgb(var(--ink-dim));
+}
+.home-foot button:hover {
+  color: rgb(var(--fg));
+}
+.home-projects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+.home-projects button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 99px;
+  background: var(--hover);
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(var(--fg));
+  transition: background-color 0.2s;
+}
+.home-projects button:hover {
+  background: var(--selected);
+}
+.home-projects svg,
+.home-projects img {
+  width: 14px;
+  height: 14px;
+  color: var(--c);
+}
+@media (max-width: 700px) {
+  .home h1 {
+    font-size: 32px;
   }
 }

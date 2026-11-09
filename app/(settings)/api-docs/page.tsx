@@ -1,16 +1,13 @@
 import { canonicalUrl } from "@/lib/server/config";
 import { pageUser } from "@/lib/server/page";
-import { SettingsShell } from "@/components/shell/SettingsShell";
+import { SettingsHead } from "@/components/shell/SettingsShell";
 import { ApiDocs } from "@/components/ApiDocs";
 export const dynamic = "force-dynamic";
 export default async function Documentation() {
-  const user = await pageUser("/api-docs"),
-    base = canonicalUrl();
+  await pageUser("/api-docs");
+  const base = canonicalUrl();
   return (
-    <SettingsShell
-      userName={user.username}
-      admin={user.role === "admin"}
-      active="api"
+    <SettingsHead
       title="Ogni operazione, via API."
       description="Progetti, liste, attività, allegati e utenti con gli stessi permessi dell’app."
       hero={
@@ -54,6 +51,6 @@ export default async function Documentation() {
           scope, risorse o scadenza del padre. La revoca è immediata.
         </p>
       </details>
-    </SettingsShell>
+    </SettingsHead>
   );
 }

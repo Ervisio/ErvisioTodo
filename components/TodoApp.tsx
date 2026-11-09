@@ -48,7 +48,9 @@ import { TaskDetailModal } from "./admin/todo/TaskDetailModal";
 import { TaskDetailPanel } from "./admin/todo/TaskDetailPanel";
 import { TagManager } from "./admin/todo/TagManager";
 import { ShareManager } from "./admin/todo/ShareManager";
-import { Rail, ShellBackdrop } from "./shell/Rail";
+import { Rail } from "./shell/Rail";
+import { HomeView } from "./home/HomeView";
+import { ShellBackdrop } from "./shell/ShellBackdrop";
 import { ListTaskPane } from "./admin/todo/ListTaskPane";
 import { SmartTaskPane } from "./admin/todo/SmartTaskPane";
 import { TaskComposer } from "./admin/todo/TaskComposer";
@@ -220,9 +222,6 @@ export default function TodoApp({
       setSelectedListId(
         lists.find((l) => l.projectId === initialProjectId)?._id || null,
       );
-    } else if (lists.length) {
-      setSelectedListId(lists[0]._id);
-      setSelectedProjectId(lists[0].projectId || null);
     }
   }, [lists, isLoading, initialListId, initialProjectId]);
   // A smart view disappears as soon as it has nothing left to show.
@@ -254,8 +253,13 @@ export default function TodoApp({
       : preferences.view === "cards" && selectedProject
         ? selectedProject.title
         : selectedList?.title || selectedProject?.title;
-    if (!title) return;
-    document.title = `${title} · ${config?.siteName || "ErvisioTodo"}`;
+    const site = config?.siteName || "ErvisioTodo";
+    if (!title) {
+      document.title = site;
+      if (!boundToHost) window.history.replaceState(null, "", "/");
+      return;
+    }
+    document.title = `${title} · ${site}`;
     if (selectedList) {
       const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
       if (link) link.href = selectedList.faviconUrl || "/favicon.svg";
@@ -294,7 +298,7 @@ export default function TodoApp({
   function selectOverview() {
     setSmart(null);
     setSelectedProjectId(undefined);
-    setSelectedListId(lists[0]?._id || null);
+    setSelectedListId(null);
     resetView();
   }
   function selectProject(project: TodoProjectPlain | null) {
@@ -313,8 +317,7 @@ export default function TodoApp({
     }
     setSmart(null);
     setSelectedListId(list._id);
-    if (selectedProjectId !== undefined)
-      setSelectedProjectId(list.projectId || null);
+    setSelectedProjectId(list.projectId || null);
     resetView();
     closeOverlay();
   }
@@ -431,7 +434,8 @@ export default function TodoApp({
       { revalidate: true },
     );
   }
-  const listView = !smart && preferences.view === "list" && !!selectedList,
+  const home = !smart && selectedProjectId === undefined,
+    listView = !smart && preferences.view === "list" && !!selectedList,
     menuGroups: MenuGroup[] = [];
   menuGroups.push({
     label: t("Vista"),
@@ -741,7 +745,7 @@ export default function TodoApp({
               <Icon icon={faListUl} />
             </button>
             <div className="slab-title">
-              <h1>
+              <h1 hidden={home}>
                 {headingIcon && (
                   <span
                     className="title-icon"
@@ -837,6 +841,17 @@ export default function TodoApp({
                 onEdit={editTask}
                 onSelect={setSelectedTaskId}
                 selectedId={selectedTaskId}
+              />
+            ) : home && (lists.length > 0 || projects.length > 0) ? (
+              <HomeView
+                lists={lists}
+                projects={projects}
+                range={range}
+                importantCount={smartCounts?.important ?? 0}
+                onSelect={setSelectedTaskId}
+                onProject={selectProject}
+                onList={selectList}
+                onImportant={() => selectSmart("important")}
               />
             ) : !contextLists.length ? (
               <div className="workspace-empty">

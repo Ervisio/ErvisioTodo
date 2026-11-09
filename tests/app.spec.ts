@@ -1122,6 +1122,11 @@ test("overview and favorites selection, theme background, and custom list color 
   await overview.click();
   await expect(overview).toHaveAttribute("aria-current", "page");
   await expect(favorites).not.toHaveAttribute("aria-current", "page");
+  await expect(page.locator(".home")).toBeVisible();
+  await page
+    .getByRole("navigation", { name: "Vai a" })
+    .getByRole("button", { name: "Aspetto lista" })
+    .click();
   await expect(page.locator(".task-surface").first()).toHaveCSS(
     "background-color",
     "rgba(0, 0, 0, 0)",

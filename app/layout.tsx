@@ -22,6 +22,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import "./shell.css";
 import "./settings.css";
+import "./auth.css";
 // Figtree (UI) and JetBrains Mono (code) are self-hosted variable fonts, as in the approved mockups.
 const figtree = localFont({
   src: "./fonts/figtree-var.ttf",

@@ -1,7 +1,12 @@
 import type { NextConfig } from "next";
 const config: NextConfig = {
   output: "standalone",
-  serverExternalPackages: ["node:sqlite"],
+  serverExternalPackages: [
+    "node:sqlite",
+    "ssh2",
+    "ssh2-sftp-client",
+    "@marsaud/smb2",
+  ],
   poweredByHeader: false,
   async headers() {
     return [

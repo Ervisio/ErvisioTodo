@@ -12,3 +12,6 @@ Settings area (approved 006-settings-pages A, 2026-11-09): components/shell/Sett
 Fonts: self-hosted variable Figtree (--font-sans) and JetBrains Mono (--font-mono, code/kbd/pre) in app/fonts with OFL texts; Manrope removed.
 App-wide controls (.button, .field inputs, .switch, .modal-surface) are restyled for glass in shell.css.
 Verification (2026-11-09): tsc, next build, unit 55/58 (3 plugin/docker failures pre-exist on main), e2e 4/4, Playwright screenshots desktop/mobile/light/dark.
+Update 2026-11-09 (round 2): hover is minimal (no icon scale/rotate/translate, no :active scale; rail items only change background). Settings pages live in route group app/(settings)/ with a shared layout.tsx (SettingsShell persistent, pages render SettingsHead) and loading.tsx; sections: Aspetto, Account, Generali e limiti, Archiviazione, API.
+Home (approved 005-home-focus B "Per progetto"): Panoramica (rail logo) opens components/home/HomeView.tsx (today's tasks grouped by project, counts, project and standalone-list chips). TodoApp starts on Home unless opened from /l or /p; a user with no lists or projects still sees the empty state. selectList always sets the project context.
+Login/register (approved 003-login-blend A "Minimale con social"): AuthLayout + AuthForm styled by app/auth.css; old .auth-*/.story-* rules removed from globals.css.

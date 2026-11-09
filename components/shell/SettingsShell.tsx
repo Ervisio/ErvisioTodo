@@ -1,9 +1,11 @@
 "use client";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
   faArrowLeft,
   faCode,
+  faDatabase,
   faPalette,
   faRightFromBracket,
   faServer,
@@ -12,48 +14,37 @@ import {
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { Icon } from "@/components/ui/Icon";
 import { usePreferences } from "@/components/Preferences";
-import { Rail, ShellBackdrop } from "./Rail";
-
-export type SettingsSection = "appearance" | "account" | "workspace" | "api";
+import { Rail } from "./Rail";
+import { ShellBackdrop } from "./ShellBackdrop";
 
 /**
- * Settings, account, workspace and API docs share one glass sheet: the project rail, a column of
- * sections grouped by audience, and the selected page. Each section keeps its own URL.
+ * Settings, account, workspace and API docs share one glass sheet. It lives in the settings layout, so
+ * moving between sections only swaps the content on the right; the rail and section column stay mounted.
  */
 export function SettingsShell({
   userName,
   admin,
-  active,
-  title,
-  description,
-  hero,
   children,
 }: {
   userName: string;
   admin: boolean;
-  active: SettingsSection;
-  title: string;
-  description?: string;
-  /** Extra header content; turns the header into a highlighted hero card. */
-  hero?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const { t } = usePreferences();
-  const link = (
-    key: SettingsSection,
-    href: string,
-    label: string,
-    icon: IconDefinition,
-  ) => (
-    <Link
-      href={href}
-      className={`settings-nav-item${active === key ? " active" : ""}`}
-      aria-current={active === key ? "page" : undefined}
-    >
-      <Icon icon={icon} />
-      <span>{label}</span>
-    </Link>
-  );
+  const { t } = usePreferences(),
+    path = usePathname();
+  const link = (href: string, label: string, icon: IconDefinition) => {
+    const active = path === href;
+    return (
+      <Link
+        href={href}
+        className={`settings-nav-item${active ? " active" : ""}`}
+        aria-current={active ? "page" : undefined}
+      >
+        <Icon icon={icon} />
+        <span>{label}</span>
+      </Link>
+    );
+  };
   return (
     <main className="workspace glass-workspace">
       <div className="glass-shell settings-shell">
@@ -66,21 +57,17 @@ export function SettingsShell({
               <span>{t("Attività")}</span>
             </Link>
             <p className="settings-nav-group">{t("Tu")}</p>
-            {link("appearance", "/settings", t("Aspetto"), faPalette)}
-            {link("account", "/account", t("Account"), faUser)}
+            {link("/settings", t("Aspetto"), faPalette)}
+            {link("/account", t("Account"), faUser)}
             {admin && (
               <>
                 <p className="settings-nav-group">{t("Spazio di lavoro")}</p>
-                {link(
-                  "workspace",
-                  "/settings/workspace",
-                  t("Generali e limiti"),
-                  faServer,
-                )}
+                {link("/settings/workspace", t("Generali e limiti"), faServer)}
+                {link("/settings/storage", t("Archiviazione"), faDatabase)}
               </>
             )}
             <p className="settings-nav-group">{t("Sviluppatori")}</p>
-            {link("api", "/api-docs", t("Documentazione API"), faCode)}
+            {link("/api-docs", t("Documentazione API"), faCode)}
             <hr className="settings-nav-sep" />
             <button
               type="button"
@@ -91,18 +78,34 @@ export function SettingsShell({
               <span>{t("Esci")}</span>
             </button>
           </nav>
-          <div className="settings-content">
-            <div className="settings-inner" key={active}>
-              <header className={`settings-head${hero ? " hero" : ""}`}>
-                <h1>{t(title)}</h1>
-                {description && <p>{t(description)}</p>}
-                {hero}
-              </header>
-              {children}
-            </div>
-          </div>
+          <div className="settings-content">{children}</div>
         </section>
       </div>
     </main>
+  );
+}
+
+/** Title block at the top of a settings page; the optional hero turns it into a highlighted card. */
+export function SettingsHead({
+  title,
+  description,
+  hero,
+  children,
+}: {
+  title: string;
+  description?: string;
+  hero?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const { t } = usePreferences();
+  return (
+    <div className="settings-inner">
+      <header className={`settings-head${hero ? " hero" : ""}`}>
+        <h1>{t(title)}</h1>
+        {description && <p>{t(description)}</p>}
+        {hero}
+      </header>
+      {children}
+    </div>
   );
 }

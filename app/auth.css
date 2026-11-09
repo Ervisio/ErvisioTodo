@@ -1,0 +1,126 @@
+/* Sign-in pages (approved Variant Studio round 003-login-blend, A): wordmark top left, form centred
+   on the glass backdrop, secondary links along the bottom. */
+.auth-page {
+  position: relative;
+  isolation: isolate;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: 28px 34px;
+  overflow: hidden;
+}
+.auth-page > :not(.shell-fx) {
+  position: relative;
+  z-index: 1;
+}
+.auth-mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  align-self: flex-start;
+  font-size: 17px;
+  font-weight: 700;
+  color: rgb(var(--fg));
+}
+.auth-mark i {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  font-style: normal;
+  color: var(--on-accent);
+  background: linear-gradient(
+    140deg,
+    color-mix(in srgb, var(--accent) 80%, #4f63ff),
+    color-mix(in srgb, var(--accent) 55%, #8a4dff)
+  );
+}
+.auth-main {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 32px 0;
+}
+.auth-form {
+  width: min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.auth-form h1 {
+  margin: 0;
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: rgb(var(--fg));
+}
+.auth-intro {
+  margin: -8px 0 4px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgb(var(--ink-dim));
+}
+.auth-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.auth-fields .field input {
+  height: 42px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid rgb(var(--fg) / 0.2);
+  border-radius: 0;
+  background: none;
+}
+.auth-fields .field input:focus {
+  border-bottom-color: var(--accent);
+  box-shadow: none;
+}
+.auth-fields .button {
+  margin-top: 6px;
+  width: 100%;
+}
+.auth-or {
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  color: rgb(var(--ink-dim));
+}
+.provider-buttons {
+  display: flex;
+  gap: 8px;
+}
+.provider-buttons .button {
+  flex: 1;
+  gap: 8px;
+}
+.auth-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: rgb(var(--ink-dim));
+}
+.auth-foot button,
+.auth-foot a {
+  color: rgb(var(--fg));
+  font-weight: 600;
+}
+.auth-foot button:hover,
+.auth-foot a:hover {
+  color: var(--accent-ink);
+}
+@media (max-width: 600px) {
+  .auth-page {
+    padding: 20px;
+  }
+  .auth-form h1 {
+    font-size: 34px;
+  }
+  .provider-buttons {
+    flex-wrap: wrap;
+  }
+}

@@ -26,19 +26,7 @@ export type RailActive =
   | { kind: "settings" }
   | null;
 
-/** The slowly drifting accent-tinted spots behind every glass page. */
-export function ShellBackdrop() {
-  return (
-    <div className="shell-fx" aria-hidden="true">
-      <i />
-      <i />
-      <i />
-      <i />
-    </div>
-  );
-}
-
-function projectGlyph(project: TodoProjectPlain) {
+export function projectGlyph(project: TodoProjectPlain) {
   return (
     <ListIcon
       list={{

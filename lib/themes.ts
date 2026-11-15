@@ -195,6 +195,12 @@ export function mix(a: string, b: string, weight: number) {
 function readable(color: string, background: string, fallback: string) {
   return contrast(color, background) >= 4.5 ? color : fallback;
 }
+/** Near-black or white, whichever reads better on a solid accent fill (WCAG contrast, always >= 4.5:1). */
+export function onAccent(accent: string) {
+  return contrast(accent, "#ffffff") >= contrast(accent, "#000000")
+    ? "#ffffff"
+    : "#000000";
+}
 export function themeVariables(
   theme: ThemeDefinition,
   accentOverride?: string | null,
@@ -211,12 +217,12 @@ export function themeVariables(
     "--line": c.border,
     "--accent": accent,
     "--accent-ch": rgbChannels(accent).join(" "),
-    "--accent-ink": readable(accent, c.sheet, c.text),
+    "--accent-ink":
+      readable(accent, c.canvas, c.text) === accent
+        ? readable(accent, c.sheet, c.text)
+        : c.text,
     "--accent-soft": mix(accent, c.sheet, 0.12),
-    "--on-accent":
-      contrast(accent, "#ffffff") >= contrast(accent, "#111111")
-        ? "#ffffff"
-        : "#111111",
+    "--on-accent": onAccent(accent),
     "--danger": readable(c.danger, c.sheet, c.text),
     "--success": readable(c.success, c.sheet, c.text),
   };

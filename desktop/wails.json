@@ -9,7 +9,7 @@
     "companyName": "Riccardo Reccia",
     "productName": "ErvisioTodo",
     "productIdentifier": "com.ervisio.todo",
-    "productVersion": "0.5.0",
+    "productVersion": "0.6.0",
     "copyright": "Copyright (c) Riccardo Reccia",
     "comments": "Native window for a self-hosted ErvisioTodo server"
   }

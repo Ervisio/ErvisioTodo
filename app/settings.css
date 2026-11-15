@@ -1,8 +1,8 @@
-/* Settings, account, workspace and API docs inside the glass shell (approved round 006-settings-pages, A).
+/* Settings, account, workspace and API docs inside the outline shell (round 006-settings-pages layout, 012-visual-black look).
    Layout lives here; the existing form components keep their markup and are restyled under .settings-content. */
 
 .glass-shell.settings-shell {
-  grid-template-columns: 56px minmax(0, 1fr);
+  grid-template-columns: 68px minmax(0, 1fr);
 }
 .slab.settings-slab {
   grid-template-columns: 240px minmax(0, 1fr);
@@ -18,7 +18,7 @@
   padding: 18px 12px;
   overflow: auto;
   scrollbar-width: none;
-  border-right: 1px solid rgb(var(--fg) / 0.06);
+  border-right: 1px solid var(--hair);
 }
 .settings-nav-group {
   margin: 0;
@@ -31,6 +31,7 @@
   padding-top: 2px;
 }
 .settings-nav-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -57,9 +58,18 @@
   color: rgb(var(--fg));
 }
 .settings-nav-item.active {
-  background: var(--selected);
   color: rgb(var(--fg));
-  font-weight: 600;
+  font-weight: 650;
+}
+.settings-nav-item.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--accent);
 }
 .settings-nav-item.active svg {
   color: var(--accent-ink);
@@ -72,7 +82,7 @@
   margin: 10px 12px;
   border: 0;
   height: 1px;
-  background: rgb(var(--fg) / 0.07);
+  background: var(--hair);
 }
 .settings-back {
   display: none;
@@ -103,33 +113,9 @@
   color: rgb(var(--ink-dim));
 }
 .settings-head.hero {
-  position: relative;
-  overflow: hidden;
   padding: 26px;
-  border-radius: 22px;
+  border-radius: 24px;
   border: 1px solid var(--edge);
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--accent) 22%, transparent),
-    color-mix(in srgb, #8a52f0 12%, transparent)
-  );
-}
-.settings-head.hero::after {
-  content: "";
-  position: absolute;
-  right: -60px;
-  top: -120px;
-  width: 260px;
-  height: 260px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--accent) 60%, #6a4bff);
-  filter: blur(80px);
-  opacity: 0.35;
-  pointer-events: none;
-}
-.settings-head.hero > * {
-  position: relative;
-  z-index: 1;
 }
 .settings-head.hero h1 {
   font-size: 28px;
@@ -159,13 +145,13 @@
   gap: 8px;
 }
 
-/* ---------- Existing settings components on glass ---------- */
+/* ---------- Existing settings components, outlined ---------- */
 .settings-content .settings-section {
   margin: 0 0 14px;
   padding: 6px 18px;
-  border: 0;
-  border-radius: 18px;
-  background: var(--hover);
+  border: 1px solid var(--hair);
+  border-radius: 20px;
+  background: none;
 }
 .settings-content .settings-section h2 {
   margin: 12px 0 6px;
@@ -182,7 +168,7 @@
   min-height: 60px;
   padding: 12px 0;
   gap: 18px;
-  border-bottom-color: rgb(var(--fg) / 0.06);
+  border-bottom-color: var(--hair);
 }
 .settings-content .settings-row strong,
 .settings-content .limit-row strong {
@@ -198,7 +184,8 @@
 .settings-content .settings-row select {
   min-height: 36px;
   border-radius: 10px;
-  background: var(--hover);
+  border: 1px solid var(--edge);
+  background: none;
   font-size: 13.5px;
 }
 .settings-content .settings-tabs {
@@ -206,9 +193,9 @@
   gap: 2px;
   margin: 0 0 14px;
   padding: 4px;
-  border: 1px solid rgb(var(--fg) / 0.08);
+  border: 1px solid var(--hair);
   border-radius: 14px;
-  background: var(--hover);
+  background: none;
 }
 .settings-content .settings-tabs button {
   min-height: 34px;
@@ -220,10 +207,9 @@
     color 0.2s;
 }
 .settings-content .settings-tabs button[aria-pressed="true"] {
-  background: var(--glass-hi);
+  background: var(--selected);
   color: rgb(var(--fg));
-  font-weight: 600;
-  box-shadow: 0 1px 4px rgb(0 0 0 / 0.2);
+  font-weight: 650;
 }
 .settings-content .settings-save {
   position: sticky;
@@ -233,24 +219,22 @@
   max-width: none;
   margin-top: 18px;
   padding: 10px 10px 10px 18px;
-  border-radius: 16px;
+  border-radius: 20px;
   border-color: var(--edge);
-  background: var(--glass-hi);
-  -webkit-backdrop-filter: blur(30px);
-  backdrop-filter: blur(30px);
-  box-shadow: 0 20px 50px -20px rgb(0 0 0 / 0.6);
+  background: var(--pop);
+  box-shadow: 0 20px 48px -20px rgb(0 0 0 / 0.35);
 }
 .settings-content .theme-settings {
   border-bottom: 0;
 }
 .settings-content .theme-card {
-  border-color: transparent;
-  border-radius: 14px;
-  background: var(--hover);
-  transition: background-color 0.2s;
+  border-color: var(--hair);
+  border-radius: 16px;
+  background: none;
+  transition: background-color 0.15s;
 }
 .settings-content .theme-card:hover {
-  background: var(--selected);
+  background: var(--hover);
 }
 .settings-content .theme-card.selected {
   outline: 0;
@@ -270,9 +254,9 @@
 .settings-content .api-operations {
   margin-bottom: 14px;
   padding: 6px;
-  border: 0;
-  border-radius: 18px;
-  background: var(--hover);
+  border: 1px solid var(--hair);
+  border-radius: 20px;
+  background: none;
 }
 .settings-content .api-operation {
   padding: 0;
@@ -364,7 +348,7 @@
     padding: 10px;
     overflow-x: auto;
     border-right: 0;
-    border-bottom: 1px solid rgb(var(--fg) / 0.06);
+    border-bottom: 1px solid var(--hair);
   }
   .settings-nav-group,
   .settings-nav-sep {
@@ -400,12 +384,8 @@
   border-radius: 22px;
   font-size: 22px;
   font-weight: 700;
-  color: #fff;
-  background: linear-gradient(
-    140deg,
-    color-mix(in srgb, var(--accent) 85%, #4f63ff),
-    color-mix(in srgb, var(--accent) 60%, #8a4dff)
-  );
+  color: rgb(var(--fg));
+  border: 1px solid var(--edge);
 }
 .settings-content .account-profile h2 {
   margin: 0;
@@ -483,20 +463,19 @@
   gap: 4px;
   padding: 14px 16px;
   border-radius: 14px;
-  border: 1px solid rgb(var(--fg) / 0.08);
-  background: var(--hover);
+  border: 1px solid var(--hair);
+  background: none;
   text-align: left;
   color: rgb(var(--fg));
   transition:
-    background-color 0.2s,
-    border-color 0.2s;
+    background-color 0.15s,
+    border-color 0.15s;
 }
 .storage-kinds button:hover {
-  background: var(--selected);
+  background: var(--hover);
 }
 .storage-kinds button[aria-checked="true"] {
   border-color: var(--accent);
-  background: var(--selected);
 }
 .storage-kinds strong {
   font-size: 15px;

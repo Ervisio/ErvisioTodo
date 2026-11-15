@@ -15,10 +15,9 @@ import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { Icon } from "@/components/ui/Icon";
 import { usePreferences } from "@/components/Preferences";
 import { Rail } from "./Rail";
-import { ShellBackdrop } from "./ShellBackdrop";
 
 /**
- * Settings, account, workspace and API docs share one glass sheet. It lives in the settings layout, so
+ * Settings, account, workspace and API docs share one outlined shell. It lives in the settings layout, so
  * moving between sections only swaps the content on the right; the rail and section column stay mounted.
  */
 export function SettingsShell({
@@ -48,7 +47,6 @@ export function SettingsShell({
   return (
     <main className="workspace glass-workspace">
       <div className="glass-shell settings-shell">
-        <ShellBackdrop />
         <Rail userName={userName} active={{ kind: "settings" }} />
         <section className="slab settings-slab">
           <nav className="settings-nav" aria-label={t("Impostazioni")}>

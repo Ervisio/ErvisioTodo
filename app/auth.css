@@ -1,5 +1,5 @@
 /* Sign-in pages (approved Variant Studio round 003-login-blend, A): wordmark top left, form centred
-   on the glass backdrop, secondary links along the bottom. */
+   on the canvas, secondary links along the bottom. */
 .auth-page {
   position: relative;
   isolation: isolate;
@@ -9,7 +9,7 @@
   padding: 28px 34px;
   overflow: hidden;
 }
-.auth-page > :not(.shell-fx) {
+.auth-page > * {
   position: relative;
   z-index: 1;
 }
@@ -30,11 +30,7 @@
   border-radius: 11px;
   font-style: normal;
   color: var(--on-accent);
-  background: linear-gradient(
-    140deg,
-    color-mix(in srgb, var(--accent) 80%, #4f63ff),
-    color-mix(in srgb, var(--accent) 55%, #8a4dff)
-  );
+  background: var(--accent);
 }
 .auth-main {
   flex: 1;

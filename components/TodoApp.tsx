@@ -6,8 +6,8 @@ import {
   useRef,
   type CSSProperties,
 } from "react";
-import Link from "next/link";
 import useSWR, { useSWRConfig } from "swr";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { Icon } from "@/components/ui/Icon";
 import { ListIcon } from "@/components/ui/ListIcon";
 import { OverflowMenu, type MenuGroup } from "@/components/ui/OverflowMenu";
@@ -24,19 +24,23 @@ import {
   faTag,
   faShareNodes,
   faXmark,
-  faSun,
-  faListUl,
+  faChevronDown,
   faCircleCheck,
   faFilter,
   faEye,
 } from "@fortawesome/free-solid-svg-icons";
 import {
   THEME_PRESETS,
-  contrast,
   luminance,
+  onAccent,
   rgbChannels,
   themeVariables,
 } from "@/lib/themes";
+import { greetingFor } from "@/lib/i18n";
+import {
+  faSun as faSunOutline,
+  faStar as faStarOutline,
+} from "@fortawesome/free-regular-svg-icons";
 import { dataFetcher, apiFetch } from "@/lib/client";
 import { usePreferences } from "./Preferences";
 import { AdminModal } from "./admin/AdminModal";
@@ -49,7 +53,7 @@ import { TagManager } from "./admin/todo/TagManager";
 import { ShareManager } from "./admin/todo/ShareManager";
 import { Rail } from "./shell/Rail";
 import { HomeView } from "./home/HomeView";
-import { ShellBackdrop } from "./shell/ShellBackdrop";
+import { ProgressRing } from "./ui/ProgressRing";
 import { ListTaskPane } from "./admin/todo/ListTaskPane";
 import { SmartTaskPane } from "./admin/todo/SmartTaskPane";
 import { useSounds } from "@/hooks/useSounds";
@@ -72,11 +76,7 @@ function surfaceStyle(
       "--accent-ch": rgbChannels(list.accentColor).join(" "),
       "--accent-ink": "rgb(var(--fg))",
       "--accent-soft": "color-mix(in srgb, var(--accent) 12%, var(--sheet))",
-      "--on-accent":
-        contrast(list.accentColor, "#ffffff") >=
-        contrast(list.accentColor, "#111111")
-          ? "#ffffff"
-          : "#111111",
+      "--on-accent": onAccent(list.accentColor),
     } as CSSProperties;
   const dark = luminance(list.backgroundColor) < 0.18;
   const base = THEME_PRESETS[dark ? 1 : 0];
@@ -145,7 +145,9 @@ export default function TodoApp({
     [searchOpen, setSearchOpen] = useState(false),
     [tagsOpen, setTagsOpen] = useState(false),
     [tab, setTab] = useState<Tab>("active"),
-    [tagIds, setTagIds] = useState<string[]>([]);
+    [tagIds, setTagIds] = useState<string[]>([]),
+    [hour, setHour] = useState<number | null>(null);
+  useEffect(() => setHour(new Date().getHours()), []);
   const [listModal, setListModal] = useState(false),
     [editingList, setEditingList] = useState<TodoListPlain | null>(null),
     [projectModal, setProjectModal] = useState(false),
@@ -248,9 +250,15 @@ export default function TodoApp({
         ? selectedProject.title
         : selectedList?.title || selectedProject?.title;
     const site = config?.siteName || "ErvisioTodo";
+    // Next.js turns every history.replaceState into a router update that re-renders this tree and
+    // aborts a pending <Link> navigation, so only touch the URL when the path really changes.
+    const syncPath = (path: string) => {
+      if (!boundToHost && location.pathname !== path)
+        window.history.replaceState(null, "", path);
+    };
     if (!title) {
       document.title = site;
-      if (!boundToHost) window.history.replaceState(null, "", "/");
+      syncPath("/");
       return;
     }
     document.title = `${title} · ${site}`;
@@ -258,17 +266,15 @@ export default function TodoApp({
       const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
       if (link) link.href = selectedList.faviconUrl || "/favicon.svg";
     }
-    if (!boundToHost) {
-      const path =
-        preferences.view === "cards" && selectedProject
-          ? `/p/${selectedProject.slug}`
-          : selectedList
-            ? `/l/${selectedList.slug}`
-            : selectedProject
-              ? `/p/${selectedProject.slug}`
-              : "/";
-      window.history.replaceState(null, "", path);
-    }
+    syncPath(
+      preferences.view === "cards" && selectedProject
+        ? `/p/${selectedProject.slug}`
+        : selectedList
+          ? `/l/${selectedList.slug}`
+          : selectedProject
+            ? `/p/${selectedProject.slug}`
+            : "/",
+    );
   }, [
     smart,
     selectedList,
@@ -575,17 +581,15 @@ export default function TodoApp({
       : preferences.view === "cards"
         ? contextTitle
         : selectedList?.title || contextTitle,
-    headingIcon = smart ? (
-      <Icon icon={smart === "today" ? faSun : faStar} />
-    ) : preferences.view === "list" && selectedList ? (
-      <ListIcon list={selectedList} />
-    ) : null;
+    ringDone = selectedList?.doneTaskCount ?? 0,
+    ringTotal = ringDone + (selectedList?.openTaskCount ?? 0),
+    showRing = !smart && !home && preferences.view === "list" && ringTotal > 0;
   const listItem = (
     key: string,
     label: string,
     active: boolean,
     onClick: () => void,
-    options: { count?: number; className?: string } = {},
+    options: { count?: number; className?: string; icon?: IconDefinition } = {},
   ) => (
     <button
       key={key}
@@ -593,8 +597,13 @@ export default function TodoApp({
       aria-current={active ? "page" : undefined}
       onClick={onClick}
     >
+      {options.icon ? (
+        <Icon icon={options.icon} />
+      ) : (
+        <span className="lists-dot" aria-hidden="true" />
+      )}
       <span className="lists-label">{label}</span>
-      {extras && !!options.count && (
+      {options.count !== undefined && (
         <span className="lists-count">{options.count}</span>
       )}
     </button>
@@ -606,7 +615,7 @@ export default function TodoApp({
         t("Oggi"),
         smart === "today",
         () => selectSmart("today"),
-        { className: "smart today", count: smartCounts?.today },
+        { icon: faSunOutline, count: smartCounts?.today },
       ),
     showImportant &&
       listItem(
@@ -614,7 +623,7 @@ export default function TodoApp({
         t("Importanti"),
         smart === "important",
         () => selectSmart("important"),
-        { className: "smart", count: smartCounts?.important },
+        { icon: faStarOutline, count: smartCounts?.important },
       ),
   ].filter(Boolean);
   const storage =
@@ -628,7 +637,6 @@ export default function TodoApp({
       data-detail={selectedTaskId || detailId ? "open" : undefined}
       data-mobile-menu={mobileOpen || undefined}
     >
-      <ShellBackdrop />
       <Rail
         userName={userName}
         active={
@@ -661,9 +669,20 @@ export default function TodoApp({
           />
         )}
         <aside className="lists" aria-label={t("Navigazione")}>
-          <p className="lists-context">{contextTitle}</p>
           {smartItems}
           {smartItems.length > 0 && <hr className="lists-sep" />}
+          <div className="lists-head">
+            <p className="lists-context">{contextTitle}</p>
+            <button
+              className="lists-add"
+              aria-label={t("Nuova lista")}
+              data-tip={t("Nuova lista")}
+              data-tip-side="right"
+              onClick={() => newList()}
+            >
+              <Icon icon={faPlus} />
+            </button>
+          </div>
           {contextLists.map((list) =>
             listItem(
               list._id,
@@ -673,39 +692,25 @@ export default function TodoApp({
               { count: list.openTaskCount },
             ),
           )}
-          {listItem("new", t("Nuova lista"), false, () => newList(), {
-            className: "ghost",
-          })}
         </aside>
         <main
           className={`slab-main${preferences.view === "cards" && !smart ? " cards-mode" : ""}`}
         >
           <header className="slab-head">
-            <button
-              className="ghost-icon mobile-lists"
-              aria-label={t("Apri menu")}
-              onClick={() => setMobileOpen(true)}
-            >
-              <Icon icon={faListUl} />
-            </button>
             <div className="slab-title">
-              <h1 hidden={home}>
-                {headingIcon && (
-                  <span
-                    className="title-icon"
-                    style={
-                      smart
-                        ? undefined
-                        : ({
-                            "--c": selectedList?.accentColor,
-                          } as CSSProperties)
-                    }
-                  >
-                    {headingIcon}
-                  </span>
-                )}
-                {heading}
-              </h1>
+              <p className="slab-greet">
+                {hour !== null &&
+                  `${t(greetingFor(hour))}${userName ? `, ${userName}` : ""}`}
+              </p>
+              <h1 hidden={home}>{heading}</h1>
+              <button
+                className="title-switch"
+                aria-label={t("Apri menu")}
+                onClick={() => setMobileOpen(true)}
+              >
+                <span>{heading}</span>
+                <Icon icon={faChevronDown} />
+              </button>
               {extras && !smart && (
                 <p>
                   {contextTitle} · {contextLists.length}{" "}
@@ -742,11 +747,21 @@ export default function TodoApp({
                 </button>
               </label>
             )}
-            <OverflowMenu
-              label={t("Altre azioni")}
-              groups={menuGroups}
-              className="ghost-icon"
-            />
+            <div className="head-end">
+              {showRing && (
+                <ProgressRing
+                  done={ringDone}
+                  total={ringTotal}
+                  label={`${ringDone} ${t("di")} ${ringTotal} ${t("completate")}`}
+                  caption={t("completate")}
+                />
+              )}
+              <OverflowMenu
+                label={t("Altre azioni")}
+                groups={menuGroups}
+                className="ghost-icon"
+              />
+            </div>
           </header>
           {(tagsOpen || tagIds.length > 0) && listView && tags.length > 0 && (
             <div className="tag-filter">
@@ -897,40 +912,6 @@ export default function TodoApp({
           />
         </div>
       )}
-      <nav className="mobile-bar" aria-label={t("Navigazione")}>
-        <button
-          className="ghost-icon"
-          aria-label={t("Liste")}
-          onClick={() => setMobileOpen(true)}
-        >
-          <Icon icon={faListUl} />
-        </button>
-        {showToday && (
-          <button
-            className={`ghost-icon${smart === "today" ? " active" : ""}`}
-            aria-label={t("Oggi")}
-            onClick={() => selectSmart("today")}
-          >
-            <Icon icon={faSun} />
-          </button>
-        )}
-        {selectedList && !smart && (
-          <button
-            className="ghost-icon"
-            aria-label={t("Cerca")}
-            onClick={openSearch}
-          >
-            <Icon icon={faMagnifyingGlass} />
-          </button>
-        )}
-        <Link
-          href="/settings"
-          className="ghost-icon"
-          aria-label={t("Impostazioni")}
-        >
-          <Icon icon={faGear} />
-        </Link>
-      </nav>
       <AdminModal
         open={listModal}
         title={t(editingList ? "Modifica lista" : "Nuova lista")}

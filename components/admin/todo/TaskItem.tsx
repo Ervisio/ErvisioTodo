@@ -10,7 +10,6 @@ import { Icon } from "@/components/ui/Icon";
 import {
   faCheck,
   faStar,
-  faListCheck,
   faPaperclip,
   faGripVertical,
 } from "@fortawesome/free-solid-svg-icons";
@@ -19,28 +18,36 @@ import type { TodoTaskPlain, TodoTagPlain } from "@/types/todo";
 import { showToast } from "@/components/Toasts";
 import { useTaskActions } from "./taskActions";
 
+/** Short relative label: Oggi, Ieri, Domani, a weekday within 6 days, otherwise the short date. */
 function formatDue(
   iso: string | null,
   locale: string,
-): {
-  label: string;
-  overdue: boolean;
-  today: boolean;
-  yesterday: boolean;
-} | null {
+  t: (text: string) => string,
+): { label: string; overdue: boolean; today: boolean } | null {
   if (!iso) return null;
   const d = new Date(iso),
     start = new Date();
   start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
-  const yesterday = new Date(start);
-  yesterday.setDate(yesterday.getDate() - 1);
+  const day = new Date(d);
+  day.setHours(0, 0, 0, 0);
+  const diff = Math.round((day.getTime() - start.getTime()) / 864e5),
+    weekday = d.toLocaleDateString(locale, { weekday: "long" });
   return {
-    label: d.toLocaleDateString(locale, { day: "numeric", month: "short" }),
-    overdue: d < start,
-    today: d >= start && d < end,
-    yesterday: d < start && d >= yesterday,
+    label:
+      diff === 0
+        ? t("Oggi")
+        : diff === -1
+          ? t("Ieri")
+          : diff === 1
+            ? t("Domani")
+            : diff > 1 && diff <= 6
+              ? weekday.charAt(0).toUpperCase() + weekday.slice(1)
+              : d.toLocaleDateString(locale, {
+                  day: "numeric",
+                  month: "short",
+                }),
+    overdue: diff < 0,
+    today: diff === 0,
   };
 }
 
@@ -99,8 +106,7 @@ export function TaskItem({
   const subtaskTotal = task.subtaskCount ?? 0,
     subtaskDone = task.subtaskDoneCount ?? 0,
     hasChildren = subtaskTotal > 0,
-    due = formatDue(task.dueDate, preferences.locale),
-    urgent = !!due && (due.today || due.overdue);
+    due = formatDue(task.dueDate, preferences.locale, t);
 
   async function handleComplete(e: React.MouseEvent) {
     e.stopPropagation();
@@ -173,29 +179,47 @@ export function TaskItem({
         </button>
 
         <div className="task-copy">
-          <button
-            type="button"
-            className="task-title"
-            onClick={(e) => {
-              e.stopPropagation();
-              onTaskClick(task._id);
-            }}
-          >
-            {task.title}
-          </button>
+          <div className="task-line">
+            <button
+              type="button"
+              className="task-title"
+              onClick={(e) => {
+                e.stopPropagation();
+                onTaskClick(task._id);
+              }}
+            >
+              {task.title}
+            </button>
+            {due && (
+              <span
+                className={`row-chip${due.today ? " today" : ""}${due.overdue ? " late" : ""}`}
+              >
+                {due.label}
+              </span>
+            )}
+            {hasChildren && (
+              <button
+                type="button"
+                className="row-chip sub-summary"
+                aria-label={`${subtaskDone}/${subtaskTotal} ${t("sottoattività")}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTaskClick(task._id);
+                }}
+              >
+                {subtaskDone}/{subtaskTotal}
+              </button>
+            )}
+          </div>
           {showExtras &&
             !!(
               listTitle ||
-              (due && !urgent) ||
               task.attachments.length ||
               task.tags.length ||
               task.assignedToUsers?.length
             ) && (
               <div className="task-subtitle">
                 {listTitle && <span className="task-chip">{listTitle}</span>}
-                {due && !urgent && (
-                  <span className="task-chip">{due.label}</span>
-                )}
                 {task.attachments.length > 0 && (
                   <span className="task-chip">
                     <Icon icon={faPaperclip} />
@@ -223,21 +247,6 @@ export function TaskItem({
         </div>
 
         <div className="row-end">
-          {showExtras && hasChildren && (
-            <button
-              type="button"
-              className={`sub-summary row-indicator${subtaskDone === subtaskTotal ? " done" : ""}`}
-              aria-label={`${subtaskDone}/${subtaskTotal} ${t("sottoattività")}`}
-              data-tip={`${subtaskDone} ${t("di")} ${subtaskTotal} ${t("sottoattività")}`}
-              data-tip-side="left"
-              onClick={(e) => {
-                e.stopPropagation();
-                onTaskClick(task._id);
-              }}
-            >
-              <Icon icon={faListCheck} />
-            </button>
-          )}
           <button
             type="button"
             className="row-button favorite"
@@ -254,11 +263,6 @@ export function TaskItem({
           >
             <Icon icon={task.isFavorite ? faStar : faStarOutline} />
           </button>
-          {due && urgent && (
-            <span className={`row-due${due.overdue ? " late" : ""}`}>
-              {due.today ? t("Oggi") : due.yesterday ? t("Ieri") : due.label}
-            </span>
-          )}
         </div>
       </div>
     </div>

@@ -310,4 +310,11 @@ export const translations: Record<string, string> = {
   completate: "completed",
   "Aggiungi la prima attività": "Add your first task",
   "Nessuna attività corrisponde ai filtri": "No tasks match the filters",
+  Buongiorno: "Good morning",
+  "Buon pomeriggio": "Good afternoon",
+  Buonasera: "Good evening",
 };
+
+/** Greeting for the viewer's local hour: morning until 13:00, afternoon until 18:00, evening after. */
+export const greetingFor = (hour: number) =>
+  hour < 13 ? "Buongiorno" : hour < 18 ? "Buon pomeriggio" : "Buonasera";

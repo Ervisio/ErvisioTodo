@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.0 - 2026-11-16
+
+- New outline look: pure black canvas with thin lines instead of glass, no gradients, and a rail without background. Light and preset themes follow the same language.
+- The accent colour from Settings drives every highlight, and text on filled accent surfaces now switches between black and white for readable contrast.
+- Header with a time-of-day greeting and a progress ring for the open list; due-date chips on every task (today, tomorrow, weekday, date) and a subtask chip.
+- Lists column with Today and Important on top, the project name with a "+" for a new list, and counts.
+- The composer no longer draws an outline while you type.
+- Fix: clicks on the rail, especially Settings, were often ignored because the app kept rewriting the URL hundreds of times per second and cancelled the pending navigation.
+- Windows desktop client (Wails): a native window around your server, with server address check, window state and external links in the browser. Built from desktop/.
+
 ## 0.5.0 - 2026-11-15
 
 - Essential workspace: the lists column is always open and shows the project name and list names; the collapse toggle and the overlay or push setting are gone.

@@ -283,7 +283,6 @@ input[type="radio"] {
 }
 .modal-surface::backdrop {
   background: #111d2d70;
-  backdrop-filter: blur(4px);
 }
 .modal-panel {
   height: 100dvh;

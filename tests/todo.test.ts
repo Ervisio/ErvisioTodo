@@ -203,6 +203,8 @@ test("list and task APIs report open top-level and direct subtask counts", () =>
   assert.equal(done.find((t) => t._id === c1._id)!.subtaskDoneCount, 1);
   setTaskState(a._id, alice, "complete");
   assert.equal(openCount(), 1);
+  assert.equal(listsFor(alice).find((x) => x._id === l._id)!.doneTaskCount, 1);
+  assert.equal(tasks("completed=true&parentTaskId=null").length, 1);
   assert.equal(
     listsFor(alice, null).find((x) => x._id === l._id)!.openTaskCount,
     1,

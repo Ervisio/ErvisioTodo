@@ -4,13 +4,14 @@ import { useCapabilities } from "@/hooks/useCapabilities";
 import { apiFetch as fetch, dataFetcher } from "@/lib/client";
 import { usePreferences } from "@/components/Preferences";
 
-import { useState, useEffect, useId, useRef } from "react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import useSWR from "swr";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import { AdminModal } from "@/components/admin/AdminModal";
 import { Icon } from "@/components/ui/Icon";
+import { OverflowMenu } from "@/components/ui/OverflowMenu";
 import {
   faXmark,
   faTrash,
@@ -18,40 +19,56 @@ import {
   faCheck,
   faPlus,
   faPaperclip,
-  faRotateLeft,
   faStar,
+  faCalendar,
   faWandMagicSparkles,
 } from "@fortawesome/free-solid-svg-icons";
 import { faStar as faStarOutline } from "@fortawesome/free-regular-svg-icons";
-import type { TodoListPlain, TodoTaskPlain, TodoTagPlain } from "@/types/todo";
+import type { TodoTaskPlain, TodoTagPlain } from "@/types/todo";
 import { useSubtasks, useTaskActions } from "./taskActions";
 
 function formatDate(
   iso: string | null | undefined,
-  opts?: Intl.DateTimeFormatOptions,
+  opts: Intl.DateTimeFormatOptions,
+  locale: string,
 ): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleString(
-    "it-IT",
-    opts ?? {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    },
-  );
+  return new Date(iso).toLocaleString(locale, opts);
 }
 
 const shortDate: Intl.DateTimeFormatOptions = {
-  day: "2-digit",
+  day: "numeric",
   month: "short",
   year: "numeric",
 };
 
+const fullDate: Intl.DateTimeFormatOptions = {
+  ...shortDate,
+  hour: "2-digit",
+  minute: "2-digit",
+};
+
+function localDay(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function daysFromToday(days: number): string {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return localDay(date);
+}
+
+function nextMonday(): string {
+  const days = 7 - ((new Date().getDay() + 6) % 7);
+  return daysFromToday(days === 1 ? 8 : days);
+}
+
 function isOverdue(iso: string | null | undefined): boolean {
   if (!iso) return false;
-  return new Date(iso) < new Date();
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  return new Date(iso) < start;
 }
 
 function displayUser(
@@ -61,19 +78,22 @@ function displayUser(
   return u.username ?? u.name ?? u.email ?? u._id ?? fallback;
 }
 
+function grow(element: HTMLTextAreaElement | null) {
+  if (!element) return;
+  element.style.height = "auto";
+  element.style.height = `${element.scrollHeight}px`;
+}
+
 function SubtaskRow({
   task,
-  parentTitle,
   depth,
   onOpen,
 }: {
   task: TodoTaskPlain;
-  parentTitle?: string;
   depth: number;
   onOpen: (id: string) => void;
 }) {
-  const { t } = usePreferences(),
-    { complete, reopen, revalidate } = useTaskActions(),
+  const { complete, reopen, revalidate } = useTaskActions(),
     nested = useSubtasks(task.listId, task._id, (task.childCount ?? 0) > 0),
     [busy, setBusy] = useState(false);
   async function toggle() {
@@ -90,7 +110,7 @@ function SubtaskRow({
   return (
     <>
       <div
-        className="subtask-row"
+        className="detail-sub"
         data-subtask={task._id}
         style={{ marginLeft: depth * 24 }}
       >
@@ -105,26 +125,18 @@ function SubtaskRow({
         >
           <span>{task.isCompleted && <Icon icon={faCheck} />}</span>
         </button>
-        <div className="task-copy">
-          <button
-            type="button"
-            className={`task-title${task.isCompleted ? " done" : ""}`}
-            onClick={() => onOpen(task._id)}
-          >
-            {task.title}
-          </button>
-          {parentTitle && (
-            <span className="parent-note">
-              {t("In")} {parentTitle}
-            </span>
-          )}
-        </div>
+        <button
+          type="button"
+          className={`detail-sub-title${task.isCompleted ? " done" : ""}`}
+          onClick={() => onOpen(task._id)}
+        >
+          {task.title}
+        </button>
       </div>
       {[...(nested.open ?? []), ...(nested.done ?? [])].map((child) => (
         <SubtaskRow
           key={child._id}
           task={child}
-          parentTitle={task.title}
           depth={depth + 1}
           onOpen={onOpen}
         />
@@ -137,7 +149,6 @@ interface Props {
   taskId: string;
   onClose: () => void;
   onEdit: (task: TodoTaskPlain) => void;
-  onAddSubtask: (task: TodoTaskPlain) => void;
   onOpenTask: (taskId: string) => void;
 }
 
@@ -145,11 +156,10 @@ export function TaskDetailPanel({
   taskId,
   onClose,
   onEdit,
-  onAddSubtask,
   onOpenTask,
 }: Props) {
   const { aiEnabled } = useCapabilities(),
-    { t } = usePreferences(),
+    { t, preferences } = usePreferences(),
     { complete, reopen, remove, removeFromLists, revalidate } =
       useTaskActions();
   const [isRefactoring, setIsRefactoring] = useState(false);
@@ -158,22 +168,27 @@ export function TaskDetailPanel({
   const [includeSubtasks, setIncludeSubtasks] = useState(false);
   const [errorStr, setErrorStr] = useState<string | null>(null);
   const [toggling, setToggling] = useState(false);
-  const headingId = useId(),
-    titleId = useId(),
-    titleRef = useRef<HTMLHeadingElement>(null),
+  const [titleDraft, setTitleDraft] = useState("");
+  const [descDraft, setDescDraft] = useState("");
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [pickingDate, setPickingDate] = useState(false);
+  const [subDraft, setSubDraft] = useState("");
+  const [addingSub, setAddingSub] = useState(false);
+  const titleRef = useRef<HTMLTextAreaElement>(null),
+    descRef = useRef<HTMLTextAreaElement>(null),
+    dateRef = useRef<HTMLInputElement>(null),
     closeRef = useRef<HTMLButtonElement>(null);
 
-  const { data: task, isLoading } = useSWR<TodoTaskPlain>(
-    `/api/admin/todo/tasks/${taskId}`,
-    dataFetcher,
-    { revalidateOnFocus: true, refreshInterval: 30_000 },
-  );
+  const {
+    data: task,
+    isLoading,
+    mutate: mutateTask,
+  } = useSWR<TodoTaskPlain>(`/api/admin/todo/tasks/${taskId}`, dataFetcher, {
+    revalidateOnFocus: true,
+    refreshInterval: 30_000,
+  });
   const { data: parent } = useSWR<TodoTaskPlain>(
     task?.parentTaskId ? `/api/admin/todo/tasks/${task.parentTaskId}` : null,
-    dataFetcher,
-  );
-  const { data: lists } = useSWR<TodoListPlain[]>(
-    "/api/admin/todo/lists",
     dataFetcher,
   );
   const { data: listTags } = useSWR<TodoTagPlain[]>(
@@ -185,9 +200,14 @@ export function TaskDetailPanel({
 
   const tagMap: Record<string, TodoTagPlain> = {};
   for (const tag of listTags ?? []) tagMap[tag._id] = tag;
-  const list = lists?.find((l) => l._id === task?.listId),
+  const dueDay = task?.dueDate ? task.dueDate.slice(0, 10) : "",
     overdue = !!task && !task.isCompleted && isOverdue(task.dueDate),
-    done = subtasks.done?.length ?? 0;
+    pills = [
+      { label: "Oggi", day: daysFromToday(0) },
+      { label: "Domani", day: daysFromToday(1) },
+      { label: "Prossima settimana", day: nextMonday() },
+    ],
+    customDay = dueDay && !pills.some((pill) => pill.day === dueDay);
 
   useEffect(() => {
     const origin = document.activeElement as HTMLElement | null;
@@ -199,9 +219,21 @@ export function TaskDetailPanel({
   }, []);
 
   useEffect(() => {
-    if (task) titleRef.current?.focus();
-    else if (!isLoading) closeRef.current?.focus();
+    if (!task && !isLoading) closeRef.current?.focus();
   }, [task?._id, isLoading]);
+
+  useEffect(() => {
+    setTitleDraft(task?.title ?? "");
+  }, [task?._id, task?.title]);
+
+  useEffect(() => {
+    setEditingDesc(false);
+    setPickingDate(false);
+    setSubDraft("");
+  }, [taskId]);
+
+  useLayoutEffect(() => grow(titleRef.current), [titleDraft, task?._id]);
+  useLayoutEffect(() => grow(descRef.current), [descDraft, editingDesc]);
 
   useEffect(() => {
     const close = (event: KeyboardEvent) => {
@@ -216,14 +248,107 @@ export function TaskDetailPanel({
     return () => window.removeEventListener("keydown", close);
   }, [onClose]);
 
-  async function toggleFavorite() {
+  async function save(
+    fields: Partial<TodoTaskPlain>,
+    request: () => Promise<Response>,
+  ) {
+    if (!task) return;
+    const previous = task;
+    await mutateTask({ ...task, ...fields }, { revalidate: false });
     try {
-      await fetch(`/api/admin/todo/tasks/${taskId}/favorite`, {
-        method: "PATCH",
-      });
+      const response = await request();
+      if (!response.ok) throw new Error();
       await revalidate();
     } catch {
+      await mutateTask(previous, { revalidate: false });
+    }
+  }
+
+  const patch = (fields: Partial<TodoTaskPlain>) =>
+    save(fields, () =>
+      fetch(`/api/admin/todo/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(fields),
+      }),
+    );
+
+  const toggleFavorite = () =>
+    task &&
+    save({ isFavorite: !task.isFavorite }, () =>
+      fetch(`/api/admin/todo/tasks/${taskId}/favorite`, { method: "PATCH" }),
+    );
+
+  async function commitTitle() {
+    if (!task) return;
+    const next = titleDraft.trim();
+    if (next === task.title) {
+      setTitleDraft(task.title);
+      return;
+    }
+    if (!next) {
+      setTitleDraft(task.title);
+      window.dispatchEvent(
+        new CustomEvent("ervisio:error", {
+          detail: t("Il titolo è obbligatorio"),
+        }),
+      );
+      return;
+    }
+    setTitleDraft(next);
+    await patch({ title: next });
+  }
+
+  async function commitDescription() {
+    if (!task) return;
+    setEditingDesc(false);
+    if (descDraft !== (task.description ?? ""))
+      await patch({ description: descDraft });
+  }
+
+  function editDescription() {
+    if (!task) return;
+    setDescDraft(task.description ?? "");
+    setEditingDesc(true);
+  }
+
+  async function setDue(day: string | null) {
+    setPickingDate(false);
+    await patch({ dueDate: day });
+  }
+
+  function togglePicker() {
+    const next = !pickingDate;
+    setPickingDate(next);
+    if (next)
+      requestAnimationFrame(() => {
+        dateRef.current?.focus();
+        dateRef.current?.showPicker?.();
+      });
+  }
+
+  async function addSubtask() {
+    const title = subDraft.trim();
+    if (!task || !title || addingSub) return;
+    setAddingSub(true);
+    try {
+      const response = await fetch("/api/admin/todo/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          listId: task.listId,
+          parentTaskId: task._id,
+        }),
+      });
+      if (response.ok) {
+        setSubDraft("");
+        await revalidate();
+      }
+    } catch {
       /* apiFetch already displays the connection error. */
+    } finally {
+      setAddingSub(false);
     }
   }
 
@@ -289,79 +414,112 @@ export function TaskDetailPanel({
     }
   }
 
+  const menuItems = task
+    ? [
+        {
+          label: t("Tutti i dettagli"),
+          icon: faPen,
+          onSelect: () => onEdit(task),
+        },
+        ...(aiEnabled
+          ? [
+              {
+                label: "Refactor AI",
+                icon: faWandMagicSparkles,
+                onSelect: promptRefactorAI,
+                disabled: isRefactoring,
+              },
+            ]
+          : []),
+        {
+          label: t("Elimina"),
+          icon: faTrash,
+          onSelect: deleteTask,
+          danger: true,
+        },
+      ]
+    : [];
+
   return (
     <>
-      <aside
-        aria-labelledby={task ? `${headingId} ${titleId}` : headingId}
-        className="task-detail"
-      >
-        <header>
-          <h3 id={headingId}>{t("Dettaglio attività")}</h3>
-          <div>
-            {task && aiEnabled && (
-              <button
-                onClick={promptRefactorAI}
-                disabled={isRefactoring}
-                title="Refactor AI"
-                aria-label="Refactor AI"
-                className="icon-button"
-              >
-                <Icon
-                  icon={faWandMagicSparkles}
-                  className={isRefactoring ? "animate-pulse" : undefined}
-                />
-              </button>
-            )}
-            {task && (
-              <button
-                onClick={deleteTask}
-                title={t("Elimina attività")}
-                aria-label={t("Elimina attività")}
-                className="icon-button danger-icon"
-              >
-                <Icon icon={faTrash} />
-              </button>
-            )}
-            <button
-              ref={closeRef}
-              onClick={onClose}
-              title={t("Chiudi")}
-              aria-label={t("Chiudi")}
-              className="icon-button"
-            >
-              <Icon icon={faXmark} />
-            </button>
-          </div>
+      <aside aria-label={t("Dettaglio attività")} className="task-detail">
+        <header className="detail-head">
+          {task && (
+            <OverflowMenu
+              label={t("Altre azioni")}
+              groups={[{ label: t("Altre azioni"), items: menuItems }]}
+            />
+          )}
+          <button
+            ref={closeRef}
+            onClick={onClose}
+            data-tip={t("Chiudi")}
+            data-tip-side="bottom"
+            aria-label={t("Chiudi")}
+            className="icon-button"
+          >
+            <Icon icon={faXmark} />
+          </button>
         </header>
 
-        <div className="detail-content">
+        <div className="detail-body">
           {isLoading && <div className="task-loading" />}
 
           {!isLoading && !task && (
-            <p className="detail-empty">{t("Attività non trovata.")}</p>
+            <p className="detail-hint">{t("Attività non trovata.")}</p>
           )}
 
           {task && (
             <>
-              <div className="detail-status">
-                <span
-                  className={`status-dot${task.isCompleted ? " done" : overdue ? " overdue" : ""}`}
-                  aria-hidden="true"
-                />
-                <span role="status">
-                  {t(
-                    task.isCompleted
-                      ? "Completata"
-                      : overdue
-                        ? "Scaduta"
-                        : "Da completare",
-                  )}
-                </span>
+              {task.parentTaskId && parent && (
                 <button
-                  className="icon-button favorite"
+                  type="button"
+                  className="detail-parent"
+                  onClick={() => onOpenTask(parent._id)}
+                >
+                  {parent.title}
+                </button>
+              )}
+
+              <div className="detail-title">
+                <button
+                  type="button"
+                  role="checkbox"
+                  className="check-task"
+                  aria-checked={task.isCompleted}
+                  aria-label={t(task.isCompleted ? "Riapri" : "Completa")}
+                  data-tip={t(task.isCompleted ? "Riapri" : "Completa")}
+                  disabled={toggling}
+                  onClick={toggleCompleted}
+                >
+                  <span>{task.isCompleted && <Icon icon={faCheck} />}</span>
+                </button>
+                <textarea
+                  ref={titleRef}
+                  rows={1}
+                  value={titleDraft}
+                  maxLength={500}
+                  aria-label={t("Titolo")}
+                  className={task.isCompleted ? "done" : undefined}
+                  onChange={(e) => setTitleDraft(e.target.value)}
+                  onBlur={commitTitle}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      e.currentTarget.blur();
+                    } else if (e.key === "Escape") {
+                      e.preventDefault();
+                      setTitleDraft(task.title);
+                      e.currentTarget.blur();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className={`icon-button favorite${task.isFavorite ? " on" : ""}`}
                   aria-pressed={task.isFavorite}
                   aria-label={t("Preferita")}
-                  title={t(
+                  data-tip={t(
                     task.isFavorite
                       ? "Rimuovi dai preferiti"
                       : "Aggiungi ai preferiti",
@@ -371,104 +529,114 @@ export function TaskDetailPanel({
                   <Icon icon={task.isFavorite ? faStar : faStarOutline} />
                 </button>
               </div>
-              <h2 id={titleId} ref={titleRef} tabIndex={-1}>
-                {task.title}
-              </h2>
 
-              <dl className="detail-meta">
-                {list && (
-                  <div>
-                    <dt>{t("Lista")}</dt>
-                    <dd>{list.title}</dd>
-                  </div>
+              <div
+                className="detail-due"
+                role="group"
+                aria-label={t("Scadenza")}
+              >
+                <span className="detail-label">{t("Scadenza")}</span>
+                {pills.map((pill) => (
+                  <button
+                    key={pill.label}
+                    type="button"
+                    className="detail-pill"
+                    aria-pressed={dueDay === pill.day}
+                    onClick={() =>
+                      setDue(dueDay === pill.day ? null : pill.day)
+                    }
+                  >
+                    {t(pill.label)}
+                  </button>
+                ))}
+                {customDay && (
+                  <span
+                    className={`detail-pill custom${overdue ? " overdue" : ""}`}
+                    aria-current="date"
+                  >
+                    {formatDate(task.dueDate, shortDate, preferences.locale)}
+                  </span>
                 )}
-                {task.parentTaskId && parent && (
-                  <div>
-                    <dt>{t("Sottoattività di")}</dt>
-                    <dd>
-                      <button onClick={() => onOpenTask(parent._id)}>
-                        {parent.title}
-                      </button>
-                    </dd>
-                  </div>
+                <button
+                  type="button"
+                  className="icon-button"
+                  aria-expanded={pickingDate}
+                  aria-label={t("Scegli una data")}
+                  data-tip={t("Scegli una data")}
+                  onClick={togglePicker}
+                >
+                  <Icon icon={faCalendar} />
+                </button>
+                {dueDay && (
+                  <button
+                    type="button"
+                    className="icon-button detail-clear"
+                    aria-label={t("Rimuovi scadenza")}
+                    data-tip={t("Rimuovi scadenza")}
+                    onClick={() => setDue(null)}
+                  >
+                    <Icon icon={faXmark} />
+                  </button>
                 )}
-                {task.dueDate && (
-                  <div>
-                    <dt>{t("Scadenza")}</dt>
-                    <dd className={overdue ? "overdue" : undefined}>
-                      {formatDate(task.dueDate, shortDate)}
-                    </dd>
-                  </div>
+                {pickingDate && (
+                  <input
+                    ref={dateRef}
+                    type="date"
+                    className="detail-date"
+                    aria-label={t("Scegli una data")}
+                    value={dueDay}
+                    onChange={(e) => e.target.value && setDue(e.target.value)}
+                  />
                 )}
-                {!!task.assignedToUsers?.length && (
-                  <div>
-                    <dt>{t("Assegnata a")}</dt>
-                    <dd>
-                      {task.assignedToUsers
-                        .map((u) => displayUser(u))
-                        .join(", ")}
-                    </dd>
-                  </div>
-                )}
-                {task.tags.length > 0 && (
-                  <div>
-                    <dt>{t("Tag")}</dt>
-                    <dd className="detail-tags">
-                      {task.tags.map((tagId) => {
-                        const tag = tagMap[tagId];
-                        return tag ? (
-                          <span key={tagId} className="tag">
-                            <i style={{ background: tag.color }} />
-                            {tag.name}
-                          </span>
-                        ) : null;
-                      })}
-                    </dd>
-                  </div>
-                )}
-                <div>
-                  <dt>{t("Creata")}</dt>
-                  <dd>
-                    {formatDate(task.createdAt, shortDate)}
-                    {task.createdByUser &&
-                      ` · ${displayUser(task.createdByUser)}`}
-                  </dd>
-                </div>
-                <div>
-                  <dt>{t("Aggiornata")}</dt>
-                  <dd>{formatDate(task.updatedAt, shortDate)}</dd>
-                </div>
-                {task.isCompleted && task.completedAt && (
-                  <div>
-                    <dt>{t("Completata")}</dt>
-                    <dd>
-                      {formatDate(task.completedAt)}
-                      {task.completedByUser &&
-                        ` · ${displayUser(task.completedByUser)}`}
-                    </dd>
-                  </div>
-                )}
-              </dl>
+              </div>
 
-              <h3>{t("Descrizione")}</h3>
-              {task.description ? (
-                <div className="prose prose-sm max-w-none detail-description">
-                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-                    {task.description}
-                  </ReactMarkdown>
-                </div>
+              {editingDesc ? (
+                <textarea
+                  ref={descRef}
+                  autoFocus
+                  className="detail-note"
+                  rows={3}
+                  value={descDraft}
+                  placeholder={t("Aggiungi una nota")}
+                  aria-label={t("Descrizione")}
+                  onChange={(e) => setDescDraft(e.target.value)}
+                  onBlur={commitDescription}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      setDescDraft(task.description ?? "");
+                      setEditingDesc(false);
+                    }
+                  }}
+                />
               ) : (
-                <p className="detail-empty">{t("Nessuna descrizione")}</p>
+                <div
+                  className={`detail-note view${task.description ? "" : " empty"}`}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={t("Descrizione")}
+                  onClick={(e) => {
+                    if (!(e.target as Element).closest("a")) editDescription();
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && e.target === e.currentTarget)
+                      editDescription();
+                  }}
+                >
+                  {task.description ? (
+                    <div className="prose prose-sm max-w-none">
+                      <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                        {task.description}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    t("Aggiungi una nota")
+                  )}
+                </div>
               )}
 
-              <h3>
-                {t("Sottoattività")}
-                <span>
-                  {done}/{subtasks.total}
-                </span>
-              </h3>
               <div
-                className="detail-subtasks"
+                className="detail-subs"
                 role="group"
                 aria-label={t("Sottoattività")}
               >
@@ -482,57 +650,121 @@ export function TaskDetailPanel({
                     />
                   ),
                 )}
+                <label className="detail-sub add">
+                  <Icon icon={faPlus} />
+                  <input
+                    value={subDraft}
+                    disabled={task.isCompleted}
+                    placeholder={t("Aggiungi sottoattività")}
+                    aria-label={t("Aggiungi sottoattività")}
+                    onChange={(e) => setSubDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addSubtask();
+                      } else if (e.key === "Escape" && subDraft) {
+                        e.preventDefault();
+                        setSubDraft("");
+                      }
+                    }}
+                  />
+                </label>
               </div>
-              <button
-                className="add-subtask"
-                onClick={() => onAddSubtask(task)}
-              >
-                <Icon icon={faPlus} />
-                {t("Aggiungi sottoattività")}
-              </button>
 
-              {task.attachments.length > 0 && (
-                <>
-                  <h3>
-                    {t("Allegati")}
-                    <span>{task.attachments.length}</span>
-                  </h3>
-                  <div className="detail-attachments">
-                    {task.attachments.map((att, i) => (
-                      <a
-                        key={i}
-                        href={att.url}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <Icon icon={faPaperclip} />
-                        <span>{att.name}</span>
-                        <small>{att.mimeType.split("/").pop()}</small>
-                      </a>
-                    ))}
+              {(!!task.assignedToUsers?.length ||
+                task.tags.length > 0 ||
+                task.attachments.length > 0) && (
+                <dl className="detail-facts">
+                  {!!task.assignedToUsers?.length && (
+                    <div>
+                      <dt>{t("Assegnata a")}</dt>
+                      <dd>
+                        {task.assignedToUsers
+                          .map((u) => displayUser(u))
+                          .join(", ")}
+                      </dd>
+                    </div>
+                  )}
+                  {task.tags.length > 0 && (
+                    <div>
+                      <dt>{t("Tag")}</dt>
+                      <dd className="detail-tags">
+                        {task.tags.map((tagId) => {
+                          const tag = tagMap[tagId];
+                          return tag ? (
+                            <span key={tagId} className="tag">
+                              <i style={{ background: tag.color }} />
+                              {tag.name}
+                            </span>
+                          ) : null;
+                        })}
+                      </dd>
+                    </div>
+                  )}
+                  {task.attachments.length > 0 && (
+                    <div>
+                      <dt>{t("Allegati")}</dt>
+                      <dd className="detail-files">
+                        {task.attachments.map((att) => (
+                          <a
+                            key={att.url}
+                            href={att.url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <Icon icon={faPaperclip} />
+                            <span>{att.name}</span>
+                          </a>
+                        ))}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              )}
+
+              {preferences.showExtras && (
+                <dl className="detail-facts quiet">
+                  <div>
+                    <dt>{t("Creata")}</dt>
+                    <dd>
+                      {formatDate(
+                        task.createdAt,
+                        shortDate,
+                        preferences.locale,
+                      )}
+                      {task.createdByUser &&
+                        ` · ${displayUser(task.createdByUser)}`}
+                    </dd>
                   </div>
-                </>
+                  <div>
+                    <dt>{t("Aggiornata")}</dt>
+                    <dd>
+                      {formatDate(
+                        task.updatedAt,
+                        shortDate,
+                        preferences.locale,
+                      )}
+                    </dd>
+                  </div>
+                  {task.isCompleted && task.completedAt && (
+                    <div>
+                      <dt>{t("Completata")}</dt>
+                      <dd>
+                        {formatDate(
+                          task.completedAt,
+                          fullDate,
+                          preferences.locale,
+                        )}
+                        {task.completedByUser &&
+                          ` · ${displayUser(task.completedByUser)}`}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
               )}
             </>
           )}
         </div>
-
-        {task && (
-          <footer>
-            <button className="button secondary" onClick={() => onEdit(task)}>
-              <Icon icon={faPen} />
-              {t("Modifica")}
-            </button>
-            <button
-              className="button"
-              disabled={toggling}
-              onClick={toggleCompleted}
-            >
-              <Icon icon={task.isCompleted ? faRotateLeft : faCheck} />
-              {t(task.isCompleted ? "Riapri" : "Completa")}
-            </button>
-          </footer>
-        )}
       </aside>
 
       <AdminModal
@@ -589,10 +821,7 @@ export function TaskDetailPanel({
               disabled={isRefactoring}
               className="flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-600 disabled:opacity-50"
             >
-              {isRefactoring ? (
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border border-white/30 border-t-white" />
-              ) : null}
-              Conferma
+              {isRefactoring ? "…" : "Conferma"}
             </button>
           </div>
         </div>

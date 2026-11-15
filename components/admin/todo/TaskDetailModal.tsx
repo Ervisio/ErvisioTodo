@@ -278,7 +278,7 @@ export function TaskDetailModal({
                 hidden={!aiEnabled}
                 onClick={openPromptModal}
                 disabled={isGeneratingAI}
-                className={`flex items-center gap-1.5 text-xs font-medium text-blue-400 transition hover:text-blue-300 ${isGeneratingAI ? "opacity-50 cursor-not-allowed animate-pulse" : ""}`}
+                className={`flex items-center gap-1.5 text-xs font-medium text-blue-400 transition hover:text-blue-300 ${isGeneratingAI ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 <Icon icon={faWandMagicSparkles} className="text-[10px]" />
                 {isGeneratingAI ? "Generazione..." : "AI Genera/Refactor"}
@@ -409,12 +409,10 @@ export function TaskDetailModal({
                 <Icon icon={faPaperclip} className="text-[10px]" />
                 Allegati ({attachments.length})
               </label>
-              <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/[0.04] px-3 py-1.5 text-xs text-ink-dim transition hover:bg-white/5 hover:text-white">
-                {uploading ? (
-                  <span className="h-3 w-3 animate-spin rounded-full border border-white/30 border-t-white" />
-                ) : (
-                  <Icon icon={faPlus} className="text-[10px]" />
-                )}
+              <label
+                className={`flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/[0.04] px-3 py-1.5 text-xs text-ink-dim transition hover:bg-white/5 hover:text-white${uploading ? " opacity-50" : ""}`}
+              >
+                <Icon icon={faPlus} className="text-[10px]" />
                 Aggiungi file
                 <input
                   type="file"
@@ -494,11 +492,7 @@ export function TaskDetailModal({
               disabled={saving}
               className="flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-600 disabled:opacity-50"
             >
-              {saving ? (
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border border-white/30 border-t-white" />
-              ) : (
-                <Icon icon={faSave} />
-              )}
+              <Icon icon={faSave} />
               {isNew ? "Crea task" : "Salva modifiche"}
             </button>
           </div>
@@ -537,11 +531,7 @@ export function TaskDetailModal({
               disabled={!generatePromptText.trim() || isGeneratingAI}
               className="flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-600 disabled:opacity-50"
             >
-              {isGeneratingAI ? (
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border border-white/30 border-t-white" />
-              ) : (
-                <Icon icon={faWandMagicSparkles} />
-              )}
+              <Icon icon={faWandMagicSparkles} />
               Genera
             </button>
           </div>

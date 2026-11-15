@@ -25,7 +25,6 @@ import {
   faShareNodes,
   faXmark,
   faSun,
-  faAnglesRight,
   faListUl,
   faCircleCheck,
   faFilter,
@@ -53,7 +52,6 @@ import { HomeView } from "./home/HomeView";
 import { ShellBackdrop } from "./shell/ShellBackdrop";
 import { ListTaskPane } from "./admin/todo/ListTaskPane";
 import { SmartTaskPane } from "./admin/todo/SmartTaskPane";
-import { TaskComposer } from "./admin/todo/TaskComposer";
 import { useSounds } from "@/hooks/useSounds";
 import type {
   TodoProjectPlain,
@@ -167,8 +165,6 @@ export default function TodoApp({
     [error, setError] = useState("");
   const initialized = useRef(false),
     searchRef = useRef<HTMLInputElement>(null),
-    listsOpen = mobileOpen || !preferences.sidebarCollapsed,
-    overlay = preferences.sidebarMode === "overlay",
     extras = preferences.showExtras,
     selectedList = lists.find((list) => list._id === selectedListId) || null,
     selectedProject =
@@ -236,8 +232,6 @@ export default function TodoApp({
     const keys = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         if (mobileOpen) setMobileOpen(false);
-        else if (listsOpen && overlay)
-          setPreference({ sidebarCollapsed: true });
       }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
@@ -284,11 +278,6 @@ export default function TodoApp({
     config?.siteName,
     t,
   ]);
-  function closeOverlay() {
-    setMobileOpen(false);
-    if (overlay && !preferences.sidebarCollapsed)
-      setPreference({ sidebarCollapsed: true });
-  }
   function resetView() {
     setSelectedTaskId(null);
     setTab("active");
@@ -319,12 +308,12 @@ export default function TodoApp({
     setSelectedListId(list._id);
     setSelectedProjectId(list.projectId || null);
     resetView();
-    closeOverlay();
+    setMobileOpen(false);
   }
   function selectSmart(view: Smart) {
     setSmart(view);
     setSelectedTaskId(null);
-    closeOverlay();
+    setMobileOpen(false);
   }
   function openSearch() {
     setSearchOpen(true);
@@ -453,18 +442,18 @@ export default function TodoApp({
       ...(listView
         ? [
             {
-              label: t("Solo importanti"),
-              icon: faStar,
-              checked: tab === "favorites",
-              onSelect: () =>
-                setTab(tab === "favorites" ? "active" : "favorites"),
-            },
-            {
               label: t("Completate"),
               icon: faCircleCheck,
               checked: tab === "completed",
               onSelect: () =>
                 setTab(tab === "completed" ? "active" : "completed"),
+            },
+            {
+              label: t("Solo importanti"),
+              icon: faStar,
+              checked: tab === "favorites",
+              onSelect: () =>
+                setTab(tab === "favorites" ? "active" : "favorites"),
             },
             ...(tags.length
               ? [
@@ -529,6 +518,7 @@ export default function TodoApp({
               {
                 label: t("Svuota lista"),
                 icon: faBroom,
+                danger: true,
                 onSelect: () => setClearList(selectedList),
               },
               {
@@ -568,8 +558,10 @@ export default function TodoApp({
       query={query}
       tags={preferences.view === "list" ? tagIds : []}
       onNew={newTask}
-      onEdit={editTask}
       onSelect={setSelectedTaskId}
+      onToggleCompleted={() =>
+        setTab(tab === "completed" ? "active" : "completed")
+      }
       selectedId={selectedTaskId}
       showAdd={showAdd}
     />
@@ -587,38 +579,23 @@ export default function TodoApp({
       <Icon icon={smart === "today" ? faSun : faStar} />
     ) : preferences.view === "list" && selectedList ? (
       <ListIcon list={selectedList} />
-    ) : null,
-    stagger = (index: number) =>
-      ({ "--d": `${(0.08 + index * 0.035).toFixed(3)}s` }) as CSSProperties;
-  let row = 0;
+    ) : null;
   const listItem = (
     key: string,
     label: string,
-    icon: React.ReactNode,
     active: boolean,
     onClick: () => void,
-    options: { color?: string; count?: number; className?: string } = {},
+    options: { count?: number; className?: string } = {},
   ) => (
     <button
       key={key}
       className={`lists-item${active ? " active" : ""}${options.className ? ` ${options.className}` : ""}`}
-      aria-label={label}
       aria-current={active ? "page" : undefined}
-      data-tip={listsOpen ? undefined : label}
-      data-tip-side="right"
-      style={
-        options.color ? ({ "--c": options.color } as CSSProperties) : undefined
-      }
       onClick={onClick}
     >
-      <span className="lists-icon">{icon}</span>
-      <span className="lists-label" style={stagger(++row)}>
-        {label}
-      </span>
+      <span className="lists-label">{label}</span>
       {extras && !!options.count && (
-        <span className="lists-count" style={stagger(row)}>
-          {options.count}
-        </span>
+        <span className="lists-count">{options.count}</span>
       )}
     </button>
   );
@@ -627,7 +604,6 @@ export default function TodoApp({
       listItem(
         "today",
         t("Oggi"),
-        <Icon icon={faSun} />,
         smart === "today",
         () => selectSmart("today"),
         { className: "smart today", count: smartCounts?.today },
@@ -636,7 +612,6 @@ export default function TodoApp({
       listItem(
         "important",
         t("Importanti"),
-        <Icon icon={faStar} />,
         smart === "important",
         () => selectSmart("important"),
         { className: "smart", count: smartCounts?.important },
@@ -650,8 +625,6 @@ export default function TodoApp({
   return (
     <div
       className="glass-shell"
-      data-lists={listsOpen ? "open" : "closed"}
-      data-lists-mode={preferences.sidebarMode}
       data-detail={selectedTaskId || detailId ? "open" : undefined}
       data-mobile-menu={mobileOpen || undefined}
     >
@@ -679,59 +652,30 @@ export default function TodoApp({
         }}
       />
       <section className="slab">
-        {((listsOpen && overlay) || mobileOpen) && (
+        {mobileOpen && (
           <button
             className="lists-scrim"
-            aria-label={t("Chiudi liste")}
+            aria-label={t("Chiudi menu")}
             tabIndex={-1}
-            onClick={closeOverlay}
+            onClick={() => setMobileOpen(false)}
           />
         )}
         <aside className="lists" aria-label={t("Navigazione")}>
-          <button
-            className="lists-item lists-toggle"
-            aria-label={t(
-              mobileOpen
-                ? "Chiudi menu"
-                : listsOpen
-                  ? "Comprimi liste"
-                  : "Espandi liste",
-            )}
-            aria-expanded={listsOpen}
-            data-tip={listsOpen ? undefined : t("Espandi liste")}
-            data-tip-side="right"
-            onClick={() => {
-              if (mobileOpen) setMobileOpen(false);
-              else setPreference({ sidebarCollapsed: listsOpen });
-            }}
-          >
-            <span className="lists-icon">
-              <Icon icon={faAnglesRight} />
-            </span>
-            <span className="lists-label lists-context" style={stagger(0)}>
-              {contextTitle}
-            </span>
-          </button>
+          <p className="lists-context">{contextTitle}</p>
           {smartItems}
           {smartItems.length > 0 && <hr className="lists-sep" />}
           {contextLists.map((list) =>
             listItem(
               list._id,
               list.title,
-              <ListIcon list={list} />,
               !smart && list._id === selectedListId,
               () => selectList(list),
-              { color: list.accentColor, count: list.openTaskCount },
+              { count: list.openTaskCount },
             ),
           )}
-          {listItem(
-            "new",
-            t("Nuova lista"),
-            <Icon icon={faPlus} />,
-            false,
-            () => newList(),
-            { className: "ghost" },
-          )}
+          {listItem("new", t("Nuova lista"), false, () => newList(), {
+            className: "ghost",
+          })}
         </aside>
         <main
           className={`slab-main${preferences.view === "cards" && !smart ? " cards-mode" : ""}`}
@@ -837,8 +781,6 @@ export default function TodoApp({
                 view={smart}
                 range={range}
                 lists={lists}
-                onNew={newTask}
-                onEdit={editTask}
                 onSelect={setSelectedTaskId}
                 selectedId={selectedTaskId}
               />
@@ -933,12 +875,6 @@ export default function TodoApp({
               </div>
             )}
           </div>
-          {listView && selectedList && tab !== "completed" && (
-            <TaskComposer
-              listId={selectedList._id}
-              onDetails={() => newTask(selectedList._id)}
-            />
-          )}
         </main>
       </section>
       {(selectedTaskId || detailId) && (
@@ -956,11 +892,7 @@ export default function TodoApp({
           <TaskDetailPanel
             taskId={(selectedTaskId || detailId)!}
             onClose={() => setSelectedTaskId(null)}
-            onEdit={(task) => {
-              setSelectedTaskId(null);
-              editTask(task);
-            }}
-            onAddSubtask={(task) => newTask(task.listId, task._id)}
+            onEdit={editTask}
             onOpenTask={setSelectedTaskId}
           />
         </div>

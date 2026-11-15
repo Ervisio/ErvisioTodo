@@ -150,15 +150,18 @@ export function listMemberIds(list: TodoListPlain) {
   ];
 }
 export function listsFor(userId: string, projectId?: string | null) {
-  const open = new Map(
-    (
-      db()
-        .prepare(
-          "SELECT list_id, count(*) AS n FROM tasks WHERE parent_id IS NULL AND json_extract(data,'$.isCompleted')=0 GROUP BY list_id",
-        )
-        .all() as { list_id: string; n: number }[]
-    ).map((r) => [r.list_id, r.n]),
-  );
+  const counts = (completed: 0 | 1) =>
+    new Map(
+      (
+        db()
+          .prepare(
+            `SELECT list_id, count(*) AS n FROM tasks WHERE parent_id IS NULL AND json_extract(data,'$.isCompleted')=${completed} GROUP BY list_id`,
+          )
+          .all() as { list_id: string; n: number }[]
+      ).map((r) => [r.list_id, r.n]),
+    );
+  const open = counts(0),
+    done = counts(1);
   return (db().prepare("SELECT data FROM lists ORDER BY rowid").all() as Row[])
     .map((r) => ({ projectId: null, ...JSON.parse(r.data) }) as TodoListPlain)
     .filter(
@@ -167,7 +170,11 @@ export function listsFor(userId: string, projectId?: string | null) {
         tokenAllowsList(l) &&
         (projectId === undefined || l.projectId === projectId),
     )
-    .map((l) => ({ ...l, openTaskCount: open.get(l._id) ?? 0 }));
+    .map((l) => ({
+      ...l,
+      openTaskCount: open.get(l._id) ?? 0,
+      doneTaskCount: done.get(l._id) ?? 0,
+    }));
 }
 export function listBySlug(slug: string, userId: string) {
   const row = db().prepare("SELECT id FROM lists WHERE slug=?").get(slug) as

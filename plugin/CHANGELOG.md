@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0 - 2026-11-15
+
+- Essential workspace: the lists column is always open and shows the project name and list names; the collapse toggle and the overlay or push setting are gone.
+- Task rows show the check and the title, plus a short due word only for today or overdue tasks; the star appears when set or on hover.
+- The composer sits right after the last task, and completed tasks expand in place from a single "N completed" line. Completing a task offers an undo.
+- The detail panel is editable in place: title, due date with Today, Tomorrow and Next week, note and subtasks. The full editor, AI rewrite and delete live in its menu.
+- No icon animation and a static background; only short fades remain when menus and panels open.
+- Home screen with today's tasks by project, a new login and registration screen, and a persistent settings layout.
+- External backup storage on S3, SFTP and SMB.
+
 ## 0.4.0 - 2026-11-09
 
 - New glass interface: AMOLED dark theme with slow blue and violet background spots, a borderless project rail and one acrylic panel for lists and tasks.

@@ -6,7 +6,7 @@ import type { CSSProperties, ReactNode } from "react";
 import {
   faCode,
   faGear,
-  faLayerGroup,
+  faInbox,
   faPlus,
   faRightFromBracket,
   faUser,
@@ -103,7 +103,7 @@ export function Rail({
         { className: "rail-logo" },
       )}
       <div className="rail-scroll">
-        {projects.map((project, index) =>
+        {projects.map((project) =>
           item(
             project._id,
             project.title,
@@ -114,10 +114,7 @@ export function Rail({
               href: `/p/${project.slug}`,
             },
             {
-              style: {
-                "--c": project.color,
-                "--n": index + 1,
-              } as CSSProperties,
+              style: { "--c": project.color } as CSSProperties,
             },
           ),
         )}
@@ -125,10 +122,9 @@ export function Rail({
           item(
             "unassigned",
             t("Senza progetto"),
-            <Icon icon={faLayerGroup} />,
+            <Icon icon={faInbox} />,
             active?.kind === "unassigned",
             { onClick: onUnassigned, href: "/" },
-            { style: { "--n": projects.length + 1 } as CSSProperties },
           )}
         {onNewProject &&
           item(
@@ -137,10 +133,7 @@ export function Rail({
             <Icon icon={faPlus} />,
             false,
             { onClick: onNewProject, href: "/" },
-            {
-              className: "rail-ghost",
-              style: { "--n": projects.length + 2 } as CSSProperties,
-            },
+            { className: "rail-ghost rail-plus" },
           )}
       </div>
       <span className="rail-spacer" />

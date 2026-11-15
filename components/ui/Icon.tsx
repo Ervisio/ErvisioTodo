@@ -13,23 +13,15 @@ interface IconProps {
   className?: string;
   size?: SizeProp;
   fixedWidth?: boolean;
-  spin?: boolean;
 }
 
-export function Icon({
-  icon,
-  className,
-  size,
-  fixedWidth = false,
-  spin = false,
-}: IconProps) {
+export function Icon({ icon, className, size, fixedWidth = false }: IconProps) {
   return (
     <FontAwesomeIcon
       icon={icon}
       className={className}
       size={size}
       fixedWidth={fixedWidth}
-      spin={spin}
     />
   );
 }

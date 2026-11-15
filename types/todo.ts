@@ -45,6 +45,8 @@ export interface TodoListPlain {
   updatedAt: string;
   /** Open top-level tasks, as listed by the active tab (returned by the lists API) */
   openTaskCount?: number;
+  /** Completed top-level tasks (returned by the lists API) */
+  doneTaskCount?: number;
 }
 
 // ─── TodoTag ─────────────────────────────────────────────────────────────────

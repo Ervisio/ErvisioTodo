@@ -99,11 +99,7 @@ export function ImageUploadField({
           disabled={uploading}
           className="shrink-0 rounded-lg border border-white/[0.04] bg-white/5 px-3 py-2 text-xs text-ink-dim transition hover:bg-white/10 hover:text-white disabled:opacity-40"
         >
-          {uploading ? (
-            <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border border-white/40 border-t-white" />
-          ) : (
-            "Carica"
-          )}
+          Carica
         </button>
       </div>
 

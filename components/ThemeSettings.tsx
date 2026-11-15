@@ -292,28 +292,6 @@ export function ThemeSettings() {
           }
         />
       </label>
-      <label className="settings-row">
-        <div>
-          <strong>{t("Apertura della colonna liste")}</strong>
-          <p>
-            {t(
-              "Sopra le attività le lascia ferme; Affianca le sposta per fare spazio.",
-            )}
-          </p>
-        </div>
-        <select
-          value={preferences.sidebarMode}
-          aria-label={t("Apertura della colonna liste")}
-          onChange={(event) =>
-            setPreference({
-              sidebarMode: event.target.value as "overlay" | "push",
-            })
-          }
-        >
-          <option value="overlay">{t("Sopra le attività")}</option>
-          <option value="push">{t("Affianca")}</option>
-        </select>
-      </label>
       <div className="theme-library-heading">
         <div>
           <h3>{t("I tuoi temi")}</h3>

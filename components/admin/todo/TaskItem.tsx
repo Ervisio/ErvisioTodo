@@ -1,44 +1,46 @@
 "use client";
 
-import { useCapabilities } from "@/hooks/useCapabilities";
 import { apiFetch as fetch } from "@/lib/client";
 import { usePreferences } from "@/components/Preferences";
 
 import { useState } from "react";
-import { AdminModal } from "@/components/admin/AdminModal";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Icon } from "@/components/ui/Icon";
 import {
   faCheck,
   faStar,
-  faTrash,
-  faPen,
-  faPlus,
-  faCalendarDay,
   faListCheck,
   faPaperclip,
   faGripVertical,
-  faWandMagicSparkles,
 } from "@fortawesome/free-solid-svg-icons";
 import { faStar as faStarOutline } from "@fortawesome/free-regular-svg-icons";
 import type { TodoTaskPlain, TodoTagPlain } from "@/types/todo";
+import { showToast } from "@/components/Toasts";
 import { useTaskActions } from "./taskActions";
 
 function formatDue(
   iso: string | null,
   locale: string,
-): { label: string; overdue: boolean; today: boolean } | null {
+): {
+  label: string;
+  overdue: boolean;
+  today: boolean;
+  yesterday: boolean;
+} | null {
   if (!iso) return null;
   const d = new Date(iso),
     start = new Date();
   start.setHours(0, 0, 0, 0);
   const end = new Date(start);
   end.setDate(end.getDate() + 1);
+  const yesterday = new Date(start);
+  yesterday.setDate(yesterday.getDate() - 1);
   return {
     label: d.toLocaleDateString(locale, { day: "numeric", month: "short" }),
     overdue: d < start,
     today: d >= start && d < end,
+    yesterday: d < start && d >= yesterday,
   };
 }
 
@@ -56,13 +58,9 @@ interface Props {
   task: TodoTaskPlain;
   /** The row whose detail panel is open. */
   selected?: boolean;
-  onEdit: (task: TodoTaskPlain) => void;
-  onAddChild: (parentId: string) => void;
   onTaskClick: (taskId: string) => void;
   /** Map of tag _id → tag info, for rendering tag badges */
   tagMap?: Record<string, TodoTagPlain>;
-  /** Position in the list, used to stagger the entrance animation. */
-  index?: number;
   /** Shown as an extra when tasks from several lists are mixed (smart views). */
   listTitle?: string;
 }
@@ -70,23 +68,16 @@ interface Props {
 export function TaskItem({
   task,
   selected = false,
-  onEdit,
-  onAddChild,
   onTaskClick,
   tagMap,
-  index = 0,
   listTitle,
 }: Props) {
-  const { aiEnabled } = useCapabilities(),
-    { t, preferences } = usePreferences(),
+  const { t, preferences } = usePreferences(),
     showExtras = preferences.showExtras;
   const [completing, setCompleting] = useState(false);
   const [togglingFav, setTogglingFav] = useState(false);
-  const [isRefactoring, setIsRefactoring] = useState(false);
-  const [isRefactorModalOpen, setIsRefactorModalOpen] = useState(false);
-  const [generateSubtasks, setGenerateSubtasks] = useState(false);
 
-  const { complete, remove, removeFromLists, revalidate } = useTaskActions();
+  const { complete, reopen, removeFromLists, revalidate } = useTaskActions();
 
   const {
     attributes,
@@ -108,7 +99,8 @@ export function TaskItem({
   const subtaskTotal = task.subtaskCount ?? 0,
     subtaskDone = task.subtaskDoneCount ?? 0,
     hasChildren = subtaskTotal > 0,
-    due = formatDue(task.dueDate, preferences.locale);
+    due = formatDue(task.dueDate, preferences.locale),
+    urgent = !!due && (due.today || due.overdue);
 
   async function handleComplete(e: React.MouseEvent) {
     e.stopPropagation();
@@ -117,6 +109,12 @@ export function TaskItem({
       if (await complete(task._id)) {
         removeFromLists(task._id);
         revalidate();
+        showToast(t("Completata"), {
+          label: t("Annulla"),
+          run: async () => {
+            if (await reopen(task._id)) revalidate();
+          },
+        });
       }
     } catch {
       /* apiFetch already displays the connection error. */
@@ -140,39 +138,8 @@ export function TaskItem({
     }
   }
 
-  async function handleDelete(e: React.MouseEvent) {
-    e.stopPropagation();
-    try {
-      await remove(task);
-    } catch {
-      /* apiFetch already displays the connection error. */
-    }
-  }
-
-  async function performRefactorAI() {
-    setIsRefactoring(true);
-    setIsRefactorModalOpen(false);
-    try {
-      const res = await fetch(`/api/admin/todo/tasks/${task._id}/ai-refactor`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "both", generateSubtasks }),
-      });
-      if (!res.ok) throw new Error("Refactor failed");
-      revalidate();
-    } catch (err: any) {
-      alert("Errore durante il refactor AI: " + err.message);
-    } finally {
-      setIsRefactoring(false);
-    }
-  }
-
   return (
-    <div
-      ref={setNodeRef}
-      style={{ ...dragStyle, "--n": index } as React.CSSProperties}
-      className="task-enter"
-    >
+    <div ref={setNodeRef} style={dragStyle}>
       <div
         data-task-row={task._id}
         className={`task-row${selected ? " selected" : ""}`}
@@ -219,17 +186,15 @@ export function TaskItem({
           {showExtras &&
             !!(
               listTitle ||
-              due ||
+              (due && !urgent) ||
               task.attachments.length ||
               task.tags.length ||
               task.assignedToUsers?.length
             ) && (
               <div className="task-subtitle">
                 {listTitle && <span className="task-chip">{listTitle}</span>}
-                {due && (
-                  <span className={`task-chip${due.overdue ? " overdue" : ""}`}>
-                    {due.label}
-                  </span>
+                {due && !urgent && (
+                  <span className="task-chip">{due.label}</span>
                 )}
                 {task.attachments.length > 0 && (
                   <span className="task-chip">
@@ -258,72 +223,7 @@ export function TaskItem({
         </div>
 
         <div className="row-end">
-          <div className="row-actions">
-            <button
-              type="button"
-              className="row-button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAddChild(task._id);
-              }}
-              aria-label={t("Aggiungi sottoattività")}
-              data-tip={t("Aggiungi sottoattività")}
-              data-tip-side="left"
-            >
-              <Icon icon={faPlus} />
-            </button>
-            <button
-              type="button"
-              className="row-button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(task);
-              }}
-              aria-label={t("Modifica")}
-              data-tip={t("Modifica")}
-              data-tip-side="left"
-            >
-              <Icon icon={faPen} />
-            </button>
-            <button
-              type="button"
-              className="row-button"
-              hidden={!aiEnabled}
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsRefactorModalOpen(true);
-              }}
-              disabled={isRefactoring}
-              aria-label="Refactor AI"
-              data-tip="Refactor AI"
-              data-tip-side="left"
-            >
-              <Icon
-                icon={faWandMagicSparkles}
-                className={isRefactoring ? "animate-pulse" : undefined}
-              />
-            </button>
-            <button
-              type="button"
-              className="row-button danger-icon"
-              onClick={handleDelete}
-              aria-label={t("Elimina")}
-              data-tip={t("Elimina")}
-              data-tip-side="left"
-            >
-              <Icon icon={faTrash} />
-            </button>
-          </div>
-          {due && (due.today || due.overdue) && (
-            <span
-              className="row-indicator late"
-              data-tip={t(due.overdue ? "Scaduta" : "Scade oggi")}
-              data-tip-side="left"
-            >
-              <Icon icon={faCalendarDay} />
-            </span>
-          )}
-          {hasChildren && (
+          {showExtras && hasChildren && (
             <button
               type="button"
               className={`sub-summary row-indicator${subtaskDone === subtaskTotal ? " done" : ""}`}
@@ -354,48 +254,13 @@ export function TaskItem({
           >
             <Icon icon={task.isFavorite ? faStar : faStarOutline} />
           </button>
+          {due && urgent && (
+            <span className={`row-due${due.overdue ? " late" : ""}`}>
+              {due.today ? t("Oggi") : due.yesterday ? t("Ieri") : due.label}
+            </span>
+          )}
         </div>
       </div>
-      {isRefactorModalOpen && (
-        <AdminModal
-          open={isRefactorModalOpen}
-          title="Refactor AI"
-          onClose={() => setIsRefactorModalOpen(false)}
-          size="md"
-        >
-          <div className="space-y-4 text-sm">
-            <p>
-              Vuoi eseguire un refactor AI di titolo e descrizione per il task
-              &quot;<strong>{task.title}</strong>&quot;?
-            </p>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={generateSubtasks}
-                onChange={(e) => setGenerateSubtasks(e.target.checked)}
-                className="switch"
-              />
-              <span>Crea subtask se necessario</span>
-            </label>
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setIsRefactorModalOpen(false)}
-                className="button secondary"
-              >
-                Annulla
-              </button>
-              <button
-                type="button"
-                onClick={performRefactorAI}
-                className="button"
-              >
-                Conferma Refactor
-              </button>
-            </div>
-          </div>
-        </AdminModal>
-      )}
     </div>
   );
 }

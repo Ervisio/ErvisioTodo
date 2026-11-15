@@ -14,8 +14,13 @@ const isTaskOrListsKey = (key: unknown) => isTaskKey(key) || key === LISTS_KEY;
 export function useTaskActions() {
   const { mutate } = useSWRConfig(),
     { playCompleted } = useSounds();
-  const revalidate = () =>
-      mutate(isTaskOrListsKey, undefined, { revalidate: true }),
+  const revalidate = (except?: string) =>
+      mutate(
+        (key) =>
+          isTaskOrListsKey(key) && key !== `/api/admin/todo/tasks/${except}`,
+        undefined,
+        { revalidate: true },
+      ),
     /** Drops a task from every cached list without waiting for the refetch. */
     removeFromLists = (id: string) =>
       mutate(
@@ -48,7 +53,7 @@ export function useTaskActions() {
       });
       if (!response.ok) return false;
       removeFromLists(task._id);
-      await revalidate();
+      await revalidate(task._id);
       return true;
     },
     async reopen(id: string) {

@@ -171,7 +171,15 @@ test("registration, login, complete task workflow, permissions, recovery and mob
   await expect(
     page.getByText("Preparare il rilascio standalone", { exact: true }),
   ).toBeVisible();
-  // The subtask summary opens the detail panel, where subtasks form a checklist.
+  // With extra info on, the subtask summary opens the detail panel, where subtasks form a checklist.
+  await page
+    .locator(".slab-head")
+    .getByRole("button", { name: "Altre azioni", exact: true })
+    .click();
+  await page
+    .getByRole("menuitemcheckbox", { name: "Informazioni extra", exact: true })
+    .click();
+  await page.keyboard.press("Escape");
   await page
     .locator(`[data-task-row="${task._id}"]`)
     .getByRole("button", { name: /^\d+\/\d+ sottoattività$/ })
@@ -184,24 +192,14 @@ test("registration, login, complete task workflow, permissions, recovery and mob
   ).toBeVisible();
   // Regression: adding a grandchild updates the open checklist immediately.
   await detail.getByText("Verificare Docker", { exact: true }).click();
-  await expect(
-    detail.getByRole("heading", { name: "Verificare Docker", exact: true }),
-  ).toBeVisible();
-  await detail
-    .getByRole("button", { name: "Aggiungi sottoattività", exact: true })
-    .click();
-  const nestedDialog = page.getByRole("dialog", {
-    name: "Nuova task",
+  await expect(detail.getByLabel("Titolo", { exact: true })).toHaveValue(
+    "Verificare Docker",
+  );
+  const subtaskInput = detail.getByLabel("Aggiungi sottoattività", {
     exact: true,
   });
-  await nestedDialog
-    .locator("input")
-    .first()
-    .fill("Controllare i volumi senza refresh");
-  await nestedDialog
-    .getByRole("button", { name: /Crea|Salva/ })
-    .last()
-    .click();
+  await subtaskInput.fill("Controllare i volumi senza refresh");
+  await subtaskInput.press("Enter");
   await expect(
     detail.getByText("Controllare i volumi senza refresh", { exact: true }),
   ).toBeVisible({ timeout: 5000 });
@@ -620,7 +618,9 @@ test("registration, login, complete task workflow, permissions, recovery and mob
   await expect(
     page.getByRole("button", { name: "Rilascio Ervisio", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Chiudi menu", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Chiudi menu", exact: true })
+    .click({ position: { x: 380, y: 400 } });
   const cards = await page.locator(".list-card").all();
   for (let i = 1; i < cards.length; i++) {
     const previous = await cards[i - 1].boundingBox(),
